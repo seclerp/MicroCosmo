@@ -1,6 +1,6 @@
-# :sparkles: MiniCosmo
+# :sparkles: MicroCosmo
 <p align="center">
-MiniCosmo is tiny language made for educational purposes. It compiles into CIL and can run under CLR platform.
+MicroCosmo is tiny language made for educational purposes. It compiles into CIL and can run under CLR platform.
 </p>
 
 ---
