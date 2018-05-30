@@ -215,7 +215,7 @@ Main function is the entry point for every program.
 
 Example:
 ```
-function main(args : string array) {
+func main(args : string array) {
   # ...
 }
 ```
