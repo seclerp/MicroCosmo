@@ -6,7 +6,7 @@ open MicroCosmo.Ast
 open MicroCosmo.ParsingUtilities
 open MicroCosmo.CompilerErrors
 
-let createParser =
+let createParser () =
     // Piglet configurator
     let configurator = ParserFactory.Configure<obj>()
     
@@ -335,7 +335,7 @@ let createParser =
     configurator.CreateParser()
 
 let parse (input : string) =
-    let parser = createParser
+    let parser = createParser ()
     
     try
         parser.Parse(input) :?> Program
