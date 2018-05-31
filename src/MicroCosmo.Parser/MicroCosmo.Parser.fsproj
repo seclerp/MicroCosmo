@@ -11,4 +11,11 @@
   <ItemGroup>
     <ProjectReference Include="..\MicroCosmo.Common\MicroCosmo.Common.fsproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Piglet" Version="1.4.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ParsingUtilities.fs" />
+    <Compile Include="Parser.fs" />
+  </ItemGroup>
 </Project>

@@ -6,15 +6,15 @@ type_spec     → NONE | ANY | STRING | INT | DOUBLE | BOOL
 fun_decl      → IDENT ( params ) : type_spec block_stmt | IDENT ( params ) block_stmt
 params        → param_list
 param_list    → param_list , param | param
-param         → type_spec IDENT | type_spec IDENT [ ]
+param         → IDENT : type_spec | IDENT : type_spec ARRAY
 stmt_list     → stmt_list stmt | ε
 stmt          → expr_stmt | block_stmt | if_stmt | while_stmt | 
                 return_stmt | break_stmt
 expr_stmt     → expr
 while_stmt    → WHILE ( expr ) stmt
-block_stmt → { local_decls stmt_list }
+block_stmt    → { local_decls stmt_list }
 local_decls   → local_decls local_decl | ε
-local_decl    → type_spec IDENT | type_spec ARRAY IDENT
+local_decl    → IDENT : type_spec | IDENT : type_spec ARRAY
 if_stmt       → IF ( expr ) stmt | IF ( expr ) stmt ELSE stmt
 return_stmt   → RETURN | RETURN expr
 
@@ -27,8 +27,8 @@ expr → IDENT = expr | IDENT [ expr ] = expr
      → expr AND expr
      → expr + expr | expr - expr 
      → expr * expr | expr / expr | expr % expr
-     → NOT expr | - expr | + expr
      → expr ** expr
+     → NOT expr | - expr | + expr
      → ( expr )
      → IDENT | IDENT [ expr ] | IDENT ( args ) | IDENT . size
      → STRING_LIT | BOOL_LIT | INT_LIT | DOUBLE_LIT | type_spec ARRAY [ expr ]

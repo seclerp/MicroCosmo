@@ -10,5 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Ast.fs" />
+    <Compile Include="CompilerException.fs" />
+    <Compile Include="CompilerErrors.fs" />
   </ItemGroup>
 </Project>
