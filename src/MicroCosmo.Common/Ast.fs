@@ -1,4 +1,4 @@
-module Ast
+module MicroCosmo.Ast
 
 type Program = Declaration list
 
@@ -89,7 +89,7 @@ and UnaryOperator =
 and Arguments = Expression list
 
 and Literal =
-    | String of string
-    | Int of int32
-    | Double of double
-    | Bool of bool
+    | StringLiteral of string
+    | IntLiteral of int32
+    | DoubleLiteral of double
+    | BoolLiteral of bool
