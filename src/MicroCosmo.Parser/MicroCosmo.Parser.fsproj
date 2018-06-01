@@ -12,10 +12,12 @@
     <ProjectReference Include="..\MicroCosmo.Common\MicroCosmo.Common.fsproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="FParsec" Version="1.0.3" />
     <PackageReference Include="Piglet" Version="1.4.0" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ParsingUtilities.fs" />
     <Compile Include="Parser.fs" />
+    <Compile Include="ParsingUtilities.fs" />
+    <Compile Include="OldParser.fs" />
   </ItemGroup>
 </Project>

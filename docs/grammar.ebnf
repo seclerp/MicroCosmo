@@ -1,7 +1,7 @@
 program       → decl_list
 decl_list     → decl_list decl | decl
 decl          → var_decl | fun_decl
-var_decl      → IDENT : type_spec | IDENT : type_spec ARRAY | IDENT : type_spec = expr | IDENT : type_spec ARRAY = expr
+var_decl      → LET IDENT : type_spec | LET IDENT : type_spec ARRAY | LET IDENT : type_spec = expr | LET IDENT : type_spec ARRAY = expr
 type_spec     → NONE | ANY | STRING | INT | DOUBLE | BOOL
 fun_decl      → IDENT ( params ) : type_spec block_stmt | IDENT ( params ) block_stmt
 params        → param_list
