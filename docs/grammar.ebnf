@@ -17,6 +17,7 @@ local_decls   → local_decls local_decl | ε
 local_decl    → IDENT : type_spec | IDENT : type_spec ARRAY
 if_stmt       → IF ( expr ) stmt | IF ( expr ) stmt ELSE stmt
 return_stmt   → RETURN | RETURN expr
+block_stmt    → BREAK  
 
 The following expressions are listed in order of increasing precedence:
 

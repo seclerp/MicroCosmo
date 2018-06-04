@@ -2,6 +2,7 @@ module MicroCosmo.Terminants
 
 // Keywords
 let LET             = "let"
+let FUNC            = "func"
 let IF              = "if"
 let ELSE            = "else"
 let WHILE           = "while"

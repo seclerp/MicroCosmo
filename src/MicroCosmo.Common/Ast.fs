@@ -8,7 +8,9 @@ and Declaration =
 
 and VariableDeclaration =
     | ScalarVariableDeclaration of Identifier * TypeSpec
+    | ScalarVariableDeclarationWithValue of Identifier * TypeSpec * Expression
     | ArrayVariableDeclaration of Identifier * TypeSpec
+    | ArrayVariableDeclarationWithValue of Identifier * TypeSpec * Expression
     
 and TypeSpec =
     | None
@@ -18,7 +20,8 @@ and TypeSpec =
     | Double
     | Bool
     
-and FunctionDeclaration = Identifier * Parameters * TypeSpec * BlockStatement
+and FunctionDeclaration = 
+    FunctionDeclaration of Identifier * Parameters * TypeSpec * BlockStatement
     
 and Identifier = string
 and Parameters = VariableDeclaration list
