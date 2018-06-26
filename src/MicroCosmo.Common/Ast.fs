@@ -3,15 +3,11 @@ module MicroCosmo.Ast
 type Program = Declaration list
 
 and Declaration = 
-    | LocalVariableDeclaration of VariableDeclaration
+    | VariableDeclaration of VariableDeclaration
     | FunctionDeclaration of FunctionDeclaration
 
-and VariableDeclaration =
-    | ScalarVariableDeclaration of Identifier * TypeSpec
-    | ScalarVariableDeclarationWithValue of Identifier * TypeSpec * Expression
-    | ArrayVariableDeclaration of Identifier * TypeSpec
-    | ArrayVariableDeclarationWithValue of Identifier * TypeSpec * Expression
-    
+and VariableDeclaration = Identifier * TypeSpec * Expression * bool
+
 and TypeSpec =
     | None
     | Any
@@ -20,24 +16,19 @@ and TypeSpec =
     | Double
     | Bool
     
-and FunctionDeclaration = 
-    FunctionDeclaration of Identifier * Parameters * TypeSpec * BlockStatement
+and FunctionDeclaration = Identifier * Parameters * TypeSpec * Statement
     
 and Identifier = string
 and Parameters = VariableDeclaration list
 and IdentifierRef = { Identifier : string }
 
 and Statement = 
-    | ExpressionStatement of ExpressionStatement
+    | ExpressionStatement of Expression
     | BlockStatement of BlockStatement
     | IfStatement of IfStatement
     | WhileStatement of WhileStatement
     | ReturnStatement of Expression option
     | BreakStatement
-    
-and ExpressionStatement = 
-    | Expression of Expression
-    | Nop
     
 and BlockStatement = VariablesScope * Statement list
 and VariablesScope = VariableDeclaration list
@@ -55,6 +46,7 @@ and Expression =
     | ArraySizeExpression of IdentifierRef
     | LiteralExpression of Literal
     | ArrayAllocationExpression of TypeSpec * Expression
+    | Empty
     
 and BinaryOperator =
     | Eq

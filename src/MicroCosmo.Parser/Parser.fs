@@ -2,22 +2,7 @@ module rec MicroCosmo.Parser
 
 open FParsec
 open MicroCosmo.Terminants
-
-// Helpers
-let ws = spaces
-let str = string
-let str_ws s = pstring s .>> ws
-let regex_ws s = regex s .>> ws
-let many_ws s = many s .>> ws
-let choice_ws s = choice s .>> ws
-let sepBy_ws a b = sepBy a b .>> ws
-
-let keyword s = str_ws s
-let symbol s = str_ws s
-let literal s = regex_ws s
-
-// Non terminal productions
-#nowarn "40"
+open ParserHelpers
 
 let parse (input : string) =
     match run program input with
@@ -26,11 +11,26 @@ let parse (input : string) =
 
 let program = many_ws declarationList
 
+// Non terminal productions
+#nowarn "40"
+
 let declarationList = many_ws declaration
 
 let declaration = variableDeclaration <|> functionDeclaration
 
-let functionDeclaration = 
+let variableDeclaration : Parser<Ast.Declaration, unit> = 
+    choice_ws [
+        pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
+            (fun a b -> Ast.VariableDeclaration (a, b, Ast.Empty, false)) ;
+        pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
+            (fun a b -> Ast.VariableDeclaration (a, b, Ast.Empty, true)) ;
+        pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) (symbol EQ >>. expression)
+            (fun a b c -> Ast.VariableDeclaration (a, b, c, false)) ;
+        pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) (symbol EQ >>. expression) 
+            (fun a b c -> Ast.VariableDeclaration (a, b, c, true)) ;
+    ]
+
+let functionDeclaration : Parser<Ast.Declaration, unit> = 
     choice_ws [
         pipe3 (keyword FUNC >>. identifier) (symbol OPENPAREN >>. parameters .>> symbol CLOSEPAREN)
             (blockStatement)
@@ -40,24 +40,10 @@ let functionDeclaration =
             (fun a b c d -> Ast.FunctionDeclaration (a, b, c, d)) ;
     ]
 
-
-let variableDeclaration = 
-    choice_ws [
-        pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> Ast.ScalarVariableDeclaration (a, b)) ;
-        pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
-            (fun a b -> Ast.ArrayVariableDeclaration (a, b)) ;
-        pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) (symbol EQ >>. expression)
-            (fun a b c -> Ast.ScalarVariableDeclarationWithValue (a, b, c)) ;
-        pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) (symbol EQ >>. expression) 
-            (fun a b c -> Ast.ArrayVariableDeclarationWithValue (a, b, c)) ;
-    ]
-
-
-let identifier = 
+let identifier : Parser<Ast.Identifier, unit> = 
     regex_ws IDENTIFIER |>> (fun a -> string a)
 
-let typeSpec = 
+let typeSpec : Parser<Ast.TypeSpec, unit> = 
     choice_ws [
         keyword NONE    |>> (fun _ -> Ast.None) ;
         keyword ANY     |>> (fun _ -> Ast.Any) ;
@@ -68,21 +54,19 @@ let typeSpec =
     ]
 
 
+let parameters : Parser<Ast.Parameters, unit> = sepBy_ws parameter (symbol COMMA)
 
-
-let parameters = sepBy_ws parameter (symbol COMMA)
-
-let parameter =
+let parameter : Parser<Ast.VariableDeclaration, unit> =
     choice_ws [
         pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> Ast.ScalarVariableDeclaration (a, b)) ;
+            (fun a b -> (a, b, Ast.Empty, false)) ;
         pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
-            (fun a b -> Ast.ArrayVariableDeclaration (a, b)) ;
+            (fun a b -> (a, b, Ast.Empty, true)) ;
     ]
     
-let statements = many_ws statement
+let statements : Parser<Ast.Statement list, unit> = many_ws statement
 
-let statement =
+let statement : Parser<Ast.Statement, unit> =
     choice_ws [
         expressionStatement ;
         blockStatement ;
@@ -92,27 +76,29 @@ let statement =
         breakStatement ;
     ]
     
-let expressionStatement = expression |>> (fun a -> Ast.ExpressionStatement a)
+let expressionStatement : Parser<Ast.Statement, unit> =
+    expression |>> (fun a -> Ast.ExpressionStatement (a))
 
-let whileStatement =
+let whileStatement : Parser<Ast.Statement, unit> =
     pipe2 (keyword WHILE >>. expression) (symbol OPENCURLY >>. statement .>> symbol CLOSECURLY) 
         (fun a b -> Ast.WhileStatement (a, b))
 
-let blockStatement =
+let blockStatement : Parser<Ast.Statement, unit> =
     pipe2 (symbol OPENCURLY >>. localDeclarations) (statements .>> symbol CLOSECURLY) 
         (fun a b -> Ast.BlockStatement (a, b))
 
-let localDeclarations = many_ws localDeclaration
+let localDeclarations : Parser<Ast.VariableDeclaration list, unit> = 
+    many_ws localDeclaration
 
-let localDeclaration = 
+let localDeclaration : Parser<Ast.VariableDeclaration, unit> = 
     choice_ws [
         pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> Ast.ScalarVariableDeclaration (a, b)) ;
+            (fun a b -> (a, b, Ast.Empty, false)) ;
         pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
-            (fun a b -> Ast.ArrayVariableDeclaration (a, b)) ;
+            (fun a b -> (a, b, Ast.Empty, true)) ;
     ]
     
-let ifStatement =
+let ifStatement : Parser<Ast.Statement, unit> =
     choice_ws [
         pipe2 (keyword IF >>. expression) (statement) 
             (fun a b -> Ast.IfStatement (a, b, None)) ;
@@ -121,18 +107,18 @@ let ifStatement =
             (fun a b c -> Ast.IfStatement (a, b, Some c)) ;
     ]
     
-let returnStatement = 
+let returnStatement : Parser<Ast.Statement, unit> = 
     choice_ws [
         (keyword RETURN |>> (fun _ -> Ast.ReturnStatement None))
         (keyword RETURN >>. expression |>> (fun a -> Ast.ReturnStatement (Some a)))
     ]
     
-let breakStatement = 
+let breakStatement : Parser<Ast.Statement, unit> = 
     (keyword BREAK |>> (fun _ -> Ast.BreakStatement))
     
 // TODO: 
-let expression =
-    keyword BREAK |>> (fun _ -> Ast.IdentifierExpression (Ast.IdentifierRef { Identifier = "lolkek" }))
+let expression : Parser<Ast.Expression, unit> =
+    keyword BREAK |>> (fun _ -> Ast.IdentifierExpression ({ Identifier = "lolkek" }))
 
 
 

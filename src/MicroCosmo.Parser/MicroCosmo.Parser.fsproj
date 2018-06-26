@@ -16,6 +16,7 @@
     <PackageReference Include="Piglet" Version="1.4.0" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ParserHelpers.fs" />
     <Compile Include="Parser.fs" />
     <Compile Include="ParsingUtilities.fs" />
     <Compile Include="OldParser.fs" />
