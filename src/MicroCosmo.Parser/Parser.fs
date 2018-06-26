@@ -12,18 +12,18 @@ let statement, statementImpl = createParserForwardedToRef()
 
 let rec typeSpec : Parser<Ast.TypeSpec, unit> = 
     choice_ws [
-        keyword NONE    |>> (fun _ -> Ast.None) ;
-        keyword ANY     |>> (fun _ -> Ast.Any) ;
-        keyword STRING  |>> (fun _ -> Ast.String) ;
-        keyword INT     |>> (fun _ -> Ast.Int) ;
-        keyword DOUBLE  |>> (fun _ -> Ast.Double) ;
-        keyword BOOL    |>> (fun _ -> Ast.Bool) ;
+        attempt (keyword NONE    |>> (fun _ -> Ast.None)) ;
+        attempt (keyword ANY     |>> (fun _ -> Ast.Any)) ;
+        attempt (keyword STRING  |>> (fun _ -> Ast.String)) ;
+        attempt (keyword INT     |>> (fun _ -> Ast.Int)) ;
+        attempt (keyword DOUBLE  |>> (fun _ -> Ast.Double)) ;
+                (keyword BOOL    |>> (fun _ -> Ast.Bool)) ;
     ]
 
 let identifier : Parser<Ast.Identifier, unit> = 
     regex_ws IDENTIFIER |>> (fun a -> string a)
 
-let pStringLiteral : Parser<Ast.Literal, unit> = 
+let stringLiteral : Parser<Ast.Literal, unit> = 
     literal STRING_LIT                     
         |>> (fun s -> Ast.StringLiteral((s.Substring(1, s.Length - 2))))
 
@@ -44,39 +44,62 @@ let doubleLiteral : Parser<Ast.Literal, unit> =
     literal DOUBLE_LIT 
         |>> (fun a -> Ast.DoubleLiteral (double a))
 
-let arrayLiteral =
+let arrayAllocation : Parser<Ast.Expression, unit>  =
     let typeSpec_ws = typeSpec .>> ws
     let array_ws = regex_ws ARRAY .>> ws
     (typeSpec_ws .>> array_ws) .>>. expression 
         |>> (fun (a, b) -> Ast.ArrayAllocationExpression (a, b))
 
+let literal : Parser<Ast.Literal, unit> = 
+    choice_ws [
+        attempt stringLiteral ;
+        attempt boolLiteral ;
+        attempt doubleLiteral ;
+        intLiteral ;
+    ]
+    
+let literalExpression : Parser<Ast.Expression, unit> = 
+    literal 
+        |>> (fun a -> Ast.LiteralExpression a)
+
+
+let assignmentExpression : Parser<Ast.Expression, unit> = 
+    choice_ws [
+        attempt (pipe3 (identifier) (symbol OPENSQUARE >>. expression .>> symbol CLOSESQUARE) (symbol EQ >>. expression) 
+            (fun a b c -> Ast.ArrayVariableAssignmentExpression ({ Identifier = a }, b, c)));
+        (pipe2 (identifier) (symbol EQ >>. expression)
+            (fun a b -> Ast.VariableAssignmentExpression ({ Identifier = a }, b))) ;
+    ]
+    
+
 // TODO: 
-do expressionImpl := keyword BREAK |>> (fun _ -> Ast.Empty)
+do expressionImpl := 
+    literalExpression
+
 
 let breakStatement : Parser<Ast.Statement, unit> = 
     (keyword BREAK |>> (fun _ -> Ast.BreakStatement))
 
 let returnStatement : Parser<Ast.Statement, unit> = 
     choice_ws [
+        attempt (keyword RETURN >>. expression |>> (fun a -> Ast.ReturnStatement (Some a)))
         (keyword RETURN |>> (fun _ -> Ast.ReturnStatement None))
-        (keyword RETURN >>. expression |>> (fun a -> Ast.ReturnStatement (Some a)))
     ]
 
 let ifStatement : Parser<Ast.Statement, unit> =
     choice_ws [
-        pipe2 (keyword IF >>. expression) (statement) 
-            (fun a b -> Ast.IfStatement (a, b, None)) ;
-        pipe3 (keyword IF >>. expression) (statement) 
-            (keyword ELSE >>. statement)
-            (fun a b c -> Ast.IfStatement (a, b, Some c)) ;
+        attempt (pipe3 (keyword IF >>. expression) (statement) (keyword ELSE >>. statement)
+            (fun a b c -> Ast.IfStatement (a, b, Some c))) ;
+        (pipe2 (keyword IF >>. expression) (statement) 
+            (fun a b -> Ast.IfStatement (a, b, None)));
     ]
 
 let localDeclaration : Parser<Ast.VariableDeclaration, unit> = 
     choice_ws [
+        attempt (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
+            (fun a b -> (a, b, Ast.Empty, true))) ;
         pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
             (fun a b -> (a, b, Ast.Empty, false)) ;
-        pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
-            (fun a b -> (a, b, Ast.Empty, true)) ;
     ]
 
 let localDeclarations : Parser<Ast.VariableDeclaration list, unit> = 
@@ -97,51 +120,63 @@ let expressionStatement : Parser<Ast.Statement, unit> =
     
 do statementImpl := 
     choice_ws [
-        expressionStatement ;
-        blockStatement ;
-        ifStatement ;
-        whileStatement ;
-        returnStatement ;
+        attempt expressionStatement ;
+        attempt blockStatement ;
+        attempt ifStatement ;
+        attempt whileStatement ;
+        attempt returnStatement ;
         breakStatement ;
     ]
 
 let parameter : Parser<Ast.VariableDeclaration, unit> =
     choice_ws [
-        pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> (a, b, Ast.Empty, false)) ;
-        pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
-            (fun a b -> (a, b, Ast.Empty, true)) ;
+        attempt (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
+            (fun a b -> (a, b, Ast.Empty, true))) ;
+        (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
+            (fun a b -> (a, b, Ast.Empty, false))) ;
     ]
 
 let parameters : Parser<Ast.Parameters, unit> = sepBy_ws parameter (symbol COMMA)
 
 let functionDeclaration : Parser<Ast.Declaration, unit> = 
     choice_ws [
-        pipe3 (keyword FUNC >>. identifier) (symbol OPENPAREN >>. parameters .>> symbol CLOSEPAREN)
-            (blockStatement)
-            (fun a b c -> Ast.FunctionDeclaration (a, b, Ast.None, c)) ;
-        pipe4 (keyword FUNC >>. identifier) (symbol OPENPAREN >>. parameters .>> symbol CLOSEPAREN)
+        attempt (pipe4 (keyword FUNC >>. identifier) (symbol OPENPAREN >>. parameters .>> symbol CLOSEPAREN)
             (symbol COLON >>. typeSpec) (blockStatement)
-            (fun a b c d -> Ast.FunctionDeclaration (a, b, c, d)) ;
+            (fun a b c d -> Ast.FunctionDeclaration (a, b, c, d))) ;
+        (pipe3 (keyword FUNC >>. identifier) (symbol OPENPAREN >>. parameters .>> symbol CLOSEPAREN)
+            (blockStatement)
+            (fun a b c -> Ast.FunctionDeclaration (a, b, Ast.None, c))) ;
+    ]
+
+let parametersDeclaration : Parser<Ast.Declaration, unit> =
+    choice_ws [
+        attempt (pipe3 identifier (symbol COLON >>. typeSpec .>> keyword ARRAY) (symbol EQ >>. expression)
+            (fun a b c -> Ast.VariableDeclaration (a, b, c, true))) ;
+        attempt (pipe3 identifier (symbol COLON >>. typeSpec) (symbol EQ >>. expression)
+            (fun a b c -> Ast.VariableDeclaration (a, b, c, false))) ;
+        attempt (pipe2 identifier (symbol COLON >>. typeSpec .>> keyword ARRAY) 
+            (fun a b -> Ast.VariableDeclaration (a, b, Ast.Empty, true))) ;
+        (pipe2 identifier (symbol COLON >>. typeSpec) 
+            (fun a b -> Ast.VariableDeclaration (a, b, Ast.Empty, false))) ;
     ]
 
 let variableDeclaration : Parser<Ast.Declaration, unit> = 
     choice_ws [
-        pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> Ast.VariableDeclaration (a, b, Ast.Empty, false)) ;
-        pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
-            (fun a b -> Ast.VariableDeclaration (a, b, Ast.Empty, true)) ;
-        pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) (symbol EQ >>. expression)
-            (fun a b c -> Ast.VariableDeclaration (a, b, c, false)) ;
-        pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) (symbol EQ >>. expression) 
-            (fun a b c -> Ast.VariableDeclaration (a, b, c, true)) ;
+        attempt (pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) (symbol EQ >>. expression)
+            (fun a b c -> Ast.VariableDeclaration (a, b, c, true))) ;
+        attempt (pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) (symbol EQ >>. expression)
+            (fun a b c -> Ast.VariableDeclaration (a, b, c, false))) ;
+        attempt (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
+            (fun a b -> Ast.VariableDeclaration (a, b, Ast.Empty, true))) ;
+        (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
+            (fun a b -> Ast.VariableDeclaration (a, b, Ast.Empty, false))) ;
     ]
 
 let declaration = variableDeclaration <|> functionDeclaration
 
 let declarationList = many_ws declaration
 
-let program = many_ws declarationList .>> eof
+let program = declarationList .>> eof
 
 let parse (input : string) =
     match run program input with
