@@ -5,13 +5,14 @@ open MicroCosmo.Parser
 let main argv =
     printfn "MicroCosmo interpreter"
     printfn "You are in AST debug mode\n"
-    let listen =
+    let rec listen() =
         printf "> "
         let input = Console.ReadLine()
         try 
-            let result = parse input
-            printfn "%A" result
+            parse input
+            listen()
+            //printfn "%A" result
         with
         | _ as ex -> printfn "%A" ex
-        
+    listen()
     0 // return an integer exit code

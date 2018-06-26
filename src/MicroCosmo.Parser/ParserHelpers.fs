@@ -1,4 +1,4 @@
-module ParserHelpers
+module MicroCosmo.ParserHelpers
 
 open FParsec
 
