@@ -55,7 +55,7 @@ let literal : Parser<Ast.Literal, unit> =
         attempt stringLiteral ;
         attempt boolLiteral ;
         attempt doubleLiteral ;
-        intLiteral ;
+                intLiteral ;
     ]
     
 let literalExpression : Parser<Ast.Expression, unit> = 
@@ -66,24 +66,77 @@ let literalExpression : Parser<Ast.Expression, unit> =
 let assignmentExpression : Parser<Ast.Expression, unit> = 
     choice_ws [
         attempt (pipe3 (identifier) (symbol OPENSQUARE >>. expression .>> symbol CLOSESQUARE) (symbol EQ >>. expression) 
-            (fun a b c -> Ast.ArrayVariableAssignmentExpression ({ Identifier = a }, b, c)));
+            (fun a b c -> Ast.ArrayVariableAssignmentExpression ({ Identifier = a }, b, c))) ;
         (pipe2 (identifier) (symbol EQ >>. expression)
             (fun a b -> Ast.VariableAssignmentExpression ({ Identifier = a }, b))) ;
     ]
     
+    
+let arguments : Parser<Ast.Arguments, unit> = sepBy_ws expression (symbol COMMA)
+    
+let identifierExpression : Parser<Ast.Expression, unit> =
+    choice_ws [
+        attempt (pipe2 (identifier) (symbol OPENSQUARE >>. expression .>> symbol CLOSESQUARE)
+            (fun a b -> Ast.ArrayIdentifierExpression ({ Identifier = a }, b)));
+        attempt (pipe2 (identifier) (symbol OPENPAREN >>. arguments .>> symbol CLOSEPAREN)
+            (fun a b -> Ast.FunctionCallExpression (a, b))) ;
+        identifier |>> (fun x -> Ast.IdentifierExpression ({ Identifier = x })) ;
 
+    ]
+    
+    
+// we set up an operator precedence parser for parsing the arithmetic expressions
+let opp = new OperatorPrecedenceParser<Ast.Expression, unit, unit>()
+let termsExpression = opp.ExpressionParser
+
+opp.TermParser <- 
+    choice_ws [ 
+        assignmentExpression; 
+        identifierExpression; 
+        literalExpression; 
+        between (str_ws "(") (str_ws ")") termsExpression 
+    ]
+
+// operator definitions follow the schema
+// operator type, string, trailing whitespace parser, precedence, associativity, function to apply
+
+opp.AddOperator(InfixOperator(OR, ws, 1, Associativity.Left, fun x y ->     (binary x Ast.Eq y)))
+opp.AddOperator(InfixOperator(IS, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Eq y)))
+
+opp.AddOperator(InfixOperator(LTEQ, ws, 2, Associativity.Left, fun x y ->   (binary x Ast.LtEq y)))
+opp.AddOperator(InfixOperator(LT, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Lt y)))
+
+opp.AddOperator(InfixOperator(GTEQ, ws, 2, Associativity.Left, fun x y ->   (binary x Ast.GtEq y)))
+opp.AddOperator(InfixOperator(GT, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Gt y)))
+
+opp.AddOperator(InfixOperator(AND, ws, 3, Associativity.Left, fun x y ->    (binary x Ast.And y)))
+
+opp.AddOperator(InfixOperator(PLUS, ws, 1, Associativity.Left, fun x y -> (binary x Ast.Sum y)))
+opp.AddOperator(InfixOperator(MINUS, ws, 1, Associativity.Left, fun x y -> (binary x Ast.Diff y)))
+opp.AddOperator(InfixOperator(ASTERISK, ws, 2, Associativity.Left, fun x y -> (binary x Ast.Mult y)))
+opp.AddOperator(InfixOperator(FORWARDSLASH, ws, 2, Associativity.Left, fun x y -> (binary x Ast.Div y)))
+opp.AddOperator(InfixOperator(DOUBLEASTERISK, ws, 3, Associativity.Right, fun x y -> (binary x Ast.Pow y)))
+
+opp.AddOperator(PrefixOperator(NOT, ws, 4, true, fun x -> (unary x Ast.Not)))
+opp.AddOperator(PrefixOperator(MINUS, ws, 4, true, fun x -> (unary x Ast.Minus)))
+opp.AddOperator(PrefixOperator(PLUS, ws, 4, true, fun x -> (unary x Ast.Plus)))
+    
 // TODO: 
 do expressionImpl := 
-    literalExpression
-
+    choice_ws [
+        attempt assignmentExpression ;
+        attempt termsExpression ;
+        attempt identifierExpression ;
+                literalExpression ;
+    ]
 
 let breakStatement : Parser<Ast.Statement, unit> = 
     (keyword BREAK |>> (fun _ -> Ast.BreakStatement))
 
 let returnStatement : Parser<Ast.Statement, unit> = 
     choice_ws [
-        attempt (keyword RETURN >>. expression |>> (fun a -> Ast.ReturnStatement (Some a)))
-        (keyword RETURN |>> (fun _ -> Ast.ReturnStatement None))
+        attempt (keyword RETURN >>. expression |>> (fun a -> Ast.ReturnStatement (Some a))) ;
+                (keyword RETURN |>> (fun _ -> Ast.ReturnStatement None)) ;
     ]
 
 let ifStatement : Parser<Ast.Statement, unit> =
