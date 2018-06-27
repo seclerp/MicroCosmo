@@ -1,8 +1,7 @@
 module MicroCosmo.CompilerErrors
 
 let create m = CompilerException m
-let lexerError a                  = create (sprintf "MC001 Lexer error: %s" a)
-let parserError a                 = create (sprintf "MC002 Parser error: %s" a)
+let syntaxError a                 = create (sprintf "MC002 Synat error: %s" a)
 let variableAlreadyDefined a      = create (sprintf "MC003 A variable named '%s' is already defined in this scope" a)
 let cannotConvertType a b         = create (sprintf "MC004 Cannot convert type '%s' to '%s'" a b)
 let operatorCannotBeApplied a b c = create (sprintf "MC005 Operator '%s' cannot be applied to operands of type '%s' and '%s'" a b c)

@@ -20,8 +20,10 @@ type FunctionTable(program) as self =
     do
     
     // Built-in functions
-    self.Add("print",       { ReturnType = Ast.NoneType; ParameterTypes = [{ Type = Ast.Any; IsArray = false }]; })
-    self.Add("println",     { ReturnType = Ast.NoneType; ParameterTypes = [{ Type = Ast.Any; IsArray = false }]; })
-    self.Add("readstr",     { ReturnType = Ast.String; ParameterTypes = []; })
+    self.Add("print",       { ReturnType = Ast.NoneType;    ParameterTypes = [{ Type = Ast.Any; IsArray = false }]; })
+    self.Add("println",     { ReturnType = Ast.NoneType;    ParameterTypes = [{ Type = Ast.Any; IsArray = false }]; })
+    self.Add("readstr",     { ReturnType = Ast.String;      ParameterTypes = []; })
+    self.Add("readint",     { ReturnType = Ast.Int;         ParameterTypes = []; })
+    self.Add("readreal",    { ReturnType = Ast.Double;      ParameterTypes = []; })
     
     program |> List.iter scanDeclaration 

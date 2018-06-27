@@ -7,6 +7,7 @@ open MicroCosmo.ParserHelpers
 
 // Non terminal productions
 #nowarn "40"
+open MicroCosmo
 
 let expression, expressionImpl = createParserForwardedToRef()
 let statement, statementImpl = createParserForwardedToRef()
@@ -93,8 +94,8 @@ let termsExpression = opp.ExpressionParser
 opp.TermParser <- 
     choice_ws [ 
         attempt assignmentExpression ; 
-        attempt identifierExpression; 
-        attempt literalExpression; 
+        attempt identifierExpression ; 
+        attempt literalExpression ; 
         between (str_ws "(") (str_ws ")") termsExpression 
     ]
 
@@ -231,12 +232,7 @@ let declarationList = many_ws declaration
 
 let program = declarationList .>> eof
 
-let parseSafe (input : string) =
-    match run program input with
-    | Success(result, _, _)   -> Some(result)
-    | Failure(errorMsg, _, _) -> None
-
 let parse (input : string) =
     match run program input with
-    | Success(result, _, _)   -> printfn "Success: %A" result 
-    | Failure(errorMsg, _, _) -> printfn "Failure: %s" errorMsg
+    | Success(result, _, _)   -> Result.Ok result
+    | Failure(errorMsg, _, _) -> Result.Error (CompilerErrors.syntaxError errorMsg)
