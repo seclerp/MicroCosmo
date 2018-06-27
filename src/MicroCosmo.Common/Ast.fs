@@ -9,7 +9,7 @@ and Declaration =
 and VariableDeclaration = Identifier * TypeSpec * Expression * bool
 
 and TypeSpec =
-    | None
+    | NoneType
     | Any
     | String
     | Int

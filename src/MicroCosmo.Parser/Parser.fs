@@ -1,6 +1,7 @@
 module MicroCosmo.Parser
 
 open FParsec
+open MicroCosmo.Ast
 open MicroCosmo.Terminants
 open MicroCosmo.ParserHelpers
 
@@ -12,7 +13,7 @@ let statement, statementImpl = createParserForwardedToRef()
 
 let rec typeSpec : Parser<Ast.TypeSpec, unit> = 
     choice_ws [
-        attempt (keyword NONE    |>> (fun _ -> Ast.None)) ;
+        attempt (keyword NONE    |>> (fun _ -> Ast.NoneType)) ;
         attempt (keyword ANY     |>> (fun _ -> Ast.Any)) ;
         attempt (keyword STRING  |>> (fun _ -> Ast.String)) ;
         attempt (keyword INT     |>> (fun _ -> Ast.Int)) ;
@@ -159,7 +160,7 @@ let localDeclarations : Parser<Ast.VariableDeclaration list, unit> =
 
 let statements : Parser<Ast.Statement list, unit> = many_ws statement
 
-let blockStatement : Parser<Ast.Statement, unit> =
+let blockStatement =
     pipe2 (symbol OPENCURLY >>. localDeclarations) (statements .>> symbol CLOSECURLY) 
         (fun a b -> Ast.BlockStatement (a, b))
         
@@ -197,7 +198,7 @@ let functionDeclaration : Parser<Ast.Declaration, unit> =
             (fun a b c d -> Ast.FunctionDeclaration (a, b, c, d))) ;
         (pipe3 (keyword FUNC >>. identifier) (symbol OPENPAREN >>. parameters .>> symbol CLOSEPAREN)
             (blockStatement)
-            (fun a b c -> Ast.FunctionDeclaration (a, b, Ast.None, c))) ;
+            (fun a b c -> Ast.FunctionDeclaration (a, b, Ast.NoneType, c))) ;
     ]
 
 let parametersDeclaration : Parser<Ast.Declaration, unit> =
@@ -229,6 +230,11 @@ let declaration = variableDeclaration <|> functionDeclaration
 let declarationList = many_ws declaration
 
 let program = declarationList .>> eof
+
+let parseSafe (input : string) =
+    match run program input with
+    | Success(result, _, _)   -> Some(result)
+    | Failure(errorMsg, _, _) -> None
 
 let parse (input : string) =
     match run program input with

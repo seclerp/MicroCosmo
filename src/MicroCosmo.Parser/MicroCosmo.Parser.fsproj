@@ -16,9 +16,16 @@
     <PackageReference Include="Piglet" Version="1.4.0" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FunctionTable.fs" />
     <Compile Include="ParserHelpers.fs" />
     <Compile Include="Parser.fs" />
-    <Compile Include="ParsingUtilities.fs" />
-    <Compile Include="OldParser.fs" />
+    <Compile Include="SymbolScope.fs" />
+    <Compile Include="SymbolScopeStack.fs" />
+    <Compile Include="VariableType.fs" />
+    <Compile Include="SymbolTable.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="FunctionTableEntry.fs" />
+    <Compile Include="SemanticAnalyzer.fs" />
   </ItemGroup>
 </Project>
