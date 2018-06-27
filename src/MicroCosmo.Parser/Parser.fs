@@ -91,9 +91,9 @@ let termsExpression = opp.ExpressionParser
 
 opp.TermParser <- 
     choice_ws [ 
-        assignmentExpression; 
-        identifierExpression; 
-        literalExpression; 
+        attempt assignmentExpression ; 
+        attempt identifierExpression; 
+        attempt literalExpression; 
         between (str_ws "(") (str_ws ")") termsExpression 
     ]
 
@@ -121,7 +121,6 @@ opp.AddOperator(PrefixOperator(NOT, ws, 4, true, fun x -> (unary x Ast.Not)))
 opp.AddOperator(PrefixOperator(MINUS, ws, 4, true, fun x -> (unary x Ast.Minus)))
 opp.AddOperator(PrefixOperator(PLUS, ws, 4, true, fun x -> (unary x Ast.Plus)))
     
-// TODO: 
 do expressionImpl := 
     choice_ws [
         attempt assignmentExpression ;
@@ -141,9 +140,9 @@ let returnStatement : Parser<Ast.Statement, unit> =
 
 let ifStatement : Parser<Ast.Statement, unit> =
     choice_ws [
-        attempt (pipe3 (keyword IF >>. expression) (statement) (keyword ELSE >>. statement)
+        attempt (pipe3 (keyword IF >>. symbol OPENPAREN >>. expression .>> symbol CLOSEPAREN) (statement) (keyword ELSE >>. statement)
             (fun a b c -> Ast.IfStatement (a, b, Some c))) ;
-        (pipe2 (keyword IF >>. expression) (statement) 
+        (pipe2 (keyword IF >>. symbol OPENPAREN >>. expression .>> symbol CLOSEPAREN) (statement) 
             (fun a b -> Ast.IfStatement (a, b, None)));
     ]
 
@@ -165,7 +164,7 @@ let blockStatement : Parser<Ast.Statement, unit> =
         (fun a b -> Ast.BlockStatement (a, b))
         
 let whileStatement : Parser<Ast.Statement, unit> =
-    pipe2 (keyword WHILE >>. expression) (symbol OPENCURLY >>. statement .>> symbol CLOSECURLY) 
+    pipe2 (keyword WHILE >>. symbol OPENPAREN >>. expression .>> symbol CLOSEPAREN) (symbol OPENCURLY >>. statement .>> symbol CLOSECURLY) 
         (fun a b -> Ast.WhileStatement (a, b))
 
 let expressionStatement : Parser<Ast.Statement, unit> =
@@ -173,19 +172,19 @@ let expressionStatement : Parser<Ast.Statement, unit> =
     
 do statementImpl := 
     choice_ws [
-        attempt expressionStatement ;
-        attempt blockStatement ;
         attempt ifStatement ;
         attempt whileStatement ;
         attempt returnStatement ;
-        breakStatement ;
+        attempt breakStatement ;
+        attempt blockStatement ;
+        expressionStatement ;
     ]
 
 let parameter : Parser<Ast.VariableDeclaration, unit> =
     choice_ws [
-        attempt (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
+        attempt (pipe2 (identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
             (fun a b -> (a, b, Ast.Empty, true))) ;
-        (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
+        (pipe2 (identifier) (symbol COLON >>. typeSpec) 
             (fun a b -> (a, b, Ast.Empty, false))) ;
     ]
 
