@@ -7,20 +7,29 @@ open MicroCosmo.SemanticAnalyzer
 let main argv =
     printfn "MicroCosmo interpreter"
     printfn "You are in parser debug mode\n"
+    
+    let printfnColored color pattern object =
+        let consoleColor = Console.ForegroundColor
+        Console.ForegroundColor <- color
+        printfn pattern object
+        Console.ForegroundColor <- consoleColor
+    
     let rec listen() =
+        let consoleColor = Console.ForegroundColor
+        Console.ForegroundColor <- ConsoleColor.Green
         printf "> "
         let input = Console.ReadLine()
+        Console.ForegroundColor <- consoleColor
         try 
             let parserResult = parse input
             match parserResult with
-            | Error e -> printfn "%A" e
+            | Error e -> printfnColored (ConsoleColor.Red) "%A" e |> ignore
             | Ok p -> 
-                printfn "AST: \n\n%A\n" p
+                printfnColored (ConsoleColor.Yellow) "AST: \n\n%A\n" p
                 let semanticAnalysisResult = analyze p
                 match semanticAnalysisResult with
-                | Error e -> printfn "%A" e
-                | Ok a -> 
-                    printfn "Symbol table: \n\n%A\n" a
+                | Error e ->    printfnColored (ConsoleColor.Red) "%A" e |> ignore
+                | Ok a ->       printfnColored (ConsoleColor.Yellow) "Semantic analysis: \n\n%A\n" a |> ignore
                     
             printfn ""
             listen()

@@ -6,17 +6,24 @@ open MicroCosmo.SymbolTable
 open MicroCosmo.FunctionTable
 open MicroCosmo.VariableType
 open MicroCosmo.CompilerErrors
+open System
 
 type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : SymbolTable) as self =
     inherit Dictionary<Ast.Expression, VariableType>(HashIdentity.Reference)
     
     let rec scanDeclaration =
         function
-        | Ast.FunctionDeclaration(x) -> scanFunctionDeclaration x
-        | _ -> ()
+        | Ast.FunctionDeclarationStatement(x) -> scanFunctionDeclaration x
+        | Ast.VariableDeclarationStatement(i, t, e, a) -> 
+            match e with
+            | Some ex -> 
+                let typeOfE = scanExpression ex
+                let typeOfI = { Type = t; IsArray = a; }
+                checkCast typeOfE typeOfI
+            | None -> ()
     
-    and scanFunctionDeclaration (_, _, functionReturnType, compoundStatement) =
-        let rec scanBlockStatement (_, statements) =
+    and scanFunctionDeclaration (_, _, functionReturnType, blockStatement) =
+        let rec scanBlockStatement statements =
             statements |> List.iter scanStatement 
             
         and scanStatement =
@@ -38,92 +45,119 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
                 scanStatement s
             | Ast.ReturnStatement(Some(e)) ->
                 let typeOfE = scanExpression e
-                if typeOfE <> simpleType functionReturnType then
-                    raise (cannotConvertType (typeOfE.ToString()) (functionReturnType.ToString()))
+                checkCast typeOfE (simpleType functionReturnType)
+            | Ast.VariableDeclarationStatement(i, t, e, a) -> 
+                match e with
+                | Some ex -> 
+                    let typeOfE = scanExpression ex
+                    let typeOfI = { Type = t; IsArray = a; }
+                    checkCast typeOfE typeOfI
+                | None -> ()
             | _ -> () 
-            
-        and scanExpression expression =
-            let checkArrayIndexType e =
-                let arrayIndexType = scanExpression e
-                if arrayIndexType <> simpleType Ast.Int then
-                    raise (cannotConvertType (arrayIndexType.ToString()) (Ast.Int.ToString()))
-            
-            let expressionType =
-                match expression with
-                | Ast.VariableAssignmentExpression(i, e) -> // e.g. i = 1
-                    let typeOfE = scanExpression e
-                    let typeOfI = symbolTable.GetIdentifierTypeSpec i
-                    if typeOfE <> typeOfI then raise (cannotConvertType (typeOfE.ToString()) (typeOfI.ToString()))
-                    typeOfI
+                       
+        let toBlockStatement = function Ast.BlockStatement x -> x
+        scanBlockStatement (toBlockStatement blockStatement)
+        
+    and scanExpression expression =
+        let checkArrayIndexType e =
+            let arrayIndexType = scanExpression e
+            if arrayIndexType <> simpleType Ast.Int then
+                raise (cannotConvertType (arrayIndexType.ToString()) (Ast.Int.ToString()))
+       
+        let expressionType =
+            match expression with
+            | Ast.VariableAssignmentExpression(i, e) -> // e.g. i = 1
+                let typeOfE = scanExpression e
+                let typeOfI = symbolTable.GetIdentifierTypeSpec i
+                checkCast typeOfE typeOfI
+                typeOfI
+               
+            | Ast.ArrayVariableAssignmentExpression(i, e1, e2) -> // e.g. j[i] = 3
+                checkArrayIndexType e1
+                               
+                let typeOfE2 = scanExpression e2
+                let typeOfI = symbolTable.GetIdentifierTypeSpec i
+                
+                if not typeOfI.IsArray then
+                   raise (cannotApplyIndexing (typeOfI.ToString()))
+                
+                if typeOfE2.IsArray then
+                   raise (cannotConvertType (typeOfE2.ToString()) (typeOfI.Type.ToString()))
+
+                checkCast typeOfE2 typeOfI
+               
+                simpleType typeOfI.Type
+               
+            | Ast.BinaryExpression(e1, op, e2) -> // e.g. 1 + 2
+                let typeOfE1 = scanExpression e1
+                let typeOfE2 = scanExpression e2
+                match op with
+                | Ast.Or | Ast.And
+                | Ast.Eq | Ast.NotEq
+                | Ast.LtEq | Ast.Lt | Ast.GtEq | Ast.Gt ->
+                    checkCast typeOfE2 typeOfE1
+                    simpleType Ast.Bool
+                | Ast.Sum | Ast.Diff | Ast.Mult | Ast.Div | Ast.Mod ->
+                    typeOfE1
                     
-                | Ast.ArrayVariableAssignmentExpression(i, e1, e2) -> // e.g. j[i] = 3
-                    checkArrayIndexType e1
-                    
-                    let typeOfE2 = scanExpression e2
-                    let typeOfI = symbolTable.GetIdentifierTypeSpec i
-                    
-                    if not typeOfI.IsArray then
-                        raise (cannotApplyIndexing (typeOfI.ToString()))
-                    
-                    if typeOfE2.IsArray then
-                        raise (cannotConvertType (typeOfE2.ToString()) (typeOfI.Type.ToString()))
-                    
-                    if typeOfE2.Type <> typeOfI.Type then 
-                        raise (cannotConvertType (typeOfE2.ToString()) (typeOfI.Type.ToString()))
-                    
-                    simpleType typeOfI.Type
-                    
-                | Ast.BinaryExpression(e1, op, e2) -> // e.g. 1 + 2
-                    let typeOfE1 = scanExpression e1
-                    let typeOfE2 = scanExpression e2
-                    match op with
-                    | Ast.Or | Ast.And ->
-                        match typeOfE1, typeOfE2 with
-                        | { Type = Bool; IsArray = false; }, { Type = Ast.Bool; IsArray = false; } -> ()
-                        | _ -> raise (operatorCannotBeApplied (op.ToString()) (typeOfE1.ToString()) (typeOfE2.ToString()))
-                        simpleType Ast.Bool
-                    | Ast.Eq | Ast.NotEq ->
-                        match typeOfE1, typeOfE2 with
-                        | { Type = a; IsArray = false; }, { Type = b; IsArray = false; } when a = b && a <> Ast.NoneType -> ()
-                        | _ -> raise (operatorCannotBeApplied (op.ToString()) (typeOfE1.ToString()) (typeOfE2.ToString()))
-                        simpleType Ast.Bool
-                    | Ast.LtEq | Ast.Lt | Ast.GtEq | Ast.Gt ->
-                        match typeOfE1, typeOfE2 with
-                        | { Type = Ast.Int; IsArray = false; }, { Type = Ast.Int; IsArray = false; }
-                        | { Type = Ast.Double; IsArray = false; }, { Type = Ast.Double; IsArray = false; } ->
-                            ()
-                        | _ -> raise (operatorCannotBeApplied (op.ToString()) (typeOfE1.ToString()) (typeOfE2.ToString()))
-                        simpleType Ast.Bool
-                    | Ast.Sum | Ast.Diff | Ast.Mult | Ast.Div | Ast.Mod ->
-                        typeOfE1
-                        
-                | Ast.FunctionCallExpression(i, a) -> // e.g. myFunc(1, "a")
-                    if not (functionTable.ContainsKey i) then
-                        raise (nameDoesNotExist i)
-                    let calledFunction = functionTable.[i]
-                    let parameterTypes = calledFunction.ParameterTypes
-                    if List.length a <> List.length parameterTypes then
-                        raise (wrongNumberOfArguments i (List.length parameterTypes) (List.length a))
-                    let argumentTypes = a |> List.map scanExpression
-                    let checkTypesMatch index l r =
-                        if l <> r then raise (invalidArguments i (index + 1) (l.ToString()) (r.ToString()))
-                    List.iteri2 checkTypesMatch argumentTypes parameterTypes
-                    simpleType calledFunction.ReturnType
-                    
-                | Ast.ArraySizeExpression(i) -> // e.g. myArray.size
+            | Ast.UnaryExpression(op, e1) -> // e.g. not true
+                let typeOfE = scanExpression e1
+                match op with
+                | Ast.Not -> 
+                    checkCast typeOfE { Type = Ast.Bool; IsArray = false; }
+                    simpleType Ast.Bool
+                | Ast.Plus | Ast.Minus -> 
+                    checkCast typeOfE { Type = Ast.Int; IsArray = false; }
                     simpleType Ast.Int
                     
-                | Ast.LiteralExpression(l) -> // e.g. 1
-                    match l with
-                    | Ast.BoolLiteral(b)    -> simpleType Ast.Bool
-                    | Ast.IntLiteral(i)     -> simpleType Ast.Int
-                    | Ast.DoubleLiteral(f)  -> simpleType Ast.Double
-                    
-                | Ast.ArrayAllocationExpression(t, e) -> // e.g. new float[2]
-                    checkArrayIndexType e
-                    { Type = t; IsArray = true }
-                    
-            self.Add(expression, expressionType)
-            expressionType 
-            
-        do program |> List.iter scanDeclaration 
+            | Ast.FunctionCallExpression(i, a) -> // e.g. myFunc(1, "a")
+                if not (functionTable.ContainsKey i) then
+                    raise (nameDoesNotExist i)
+                let calledFunction = functionTable.[i]
+                let parameterTypes = calledFunction.ParameterTypes
+                if List.length a <> List.length parameterTypes then
+                    raise (wrongNumberOfArguments i (List.length parameterTypes) (List.length a))
+                let argumentTypes = a |> List.map scanExpression
+                List.iteri2 (checkArgument i) argumentTypes parameterTypes
+                simpleType calledFunction.ReturnType
+               
+            | Ast.ArraySizeExpression(i) -> // e.g. myArray.size
+                simpleType Ast.Int
+               
+            | Ast.IdentifierExpression(i) -> // e.g. myArray.size
+                symbolTable.GetIdentifierTypeSpec i
+                               
+            | Ast.LiteralExpression(l) -> // e.g. 1
+                match l with
+                | Ast.BoolLiteral(b)    -> simpleType Ast.Bool
+                | Ast.IntLiteral(i)     -> simpleType Ast.Int
+                | Ast.DoubleLiteral(f)  -> simpleType Ast.Double
+                | Ast.StringLiteral(f)  -> simpleType Ast.String
+               
+            | Ast.ArrayAllocationExpression(t, e) -> // e.g. new float[2]
+                checkArrayIndexType e
+                { Type = t; IsArray = true }
+
+            | Ast.Empty -> simpleType Ast.Any
+            | e -> raise (new Exception(sprintf "%A" e))
+               
+        self.Add(expression, expressionType)
+        expressionType    
+       
+    and canConvertType fromType toType =
+        match fromType, toType with
+        | { Type = _; IsArray = false; }, { Type = Ast.Any; IsArray = false; } -> true
+        | { Type = Ast.Int; IsArray = false; }, { Type = Ast.Double; IsArray = false; } -> true
+        | f, t when f = t -> true
+        | _ -> false
+
+    and checkCast fromVariableType toVariableType =
+        if not (canConvertType fromVariableType toVariableType) then 
+            raise (cannotConvertType (fromVariableType.ToString()) (toVariableType.ToString()))
+
+    and checkArgument identifier index fromArgumentType toParameterType =
+        if not (canConvertType fromArgumentType toParameterType) then 
+            raise (invalidArguments identifier (index + 1) (fromArgumentType.ToString()) (toParameterType.ToString()))
+        
+       
+    do program |> List.iter scanDeclaration 

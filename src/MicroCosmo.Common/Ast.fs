@@ -1,12 +1,8 @@
 module MicroCosmo.Ast
 
-type Program = Declaration list
+type Program = Statement list
 
-and Declaration = 
-    | VariableDeclaration of VariableDeclaration
-    | FunctionDeclaration of FunctionDeclaration
-
-and VariableDeclaration = Identifier * TypeSpec * Expression * bool
+and VariableDeclarationStatement = Identifier * TypeSpec * Expression option * bool
 
 and TypeSpec =
     | NoneType
@@ -16,13 +12,15 @@ and TypeSpec =
     | Double
     | Bool
     
-and FunctionDeclaration = Identifier * Parameters * TypeSpec * Statement
+and FunctionDeclarationStatement = Identifier * Parameters * TypeSpec * Statement
     
 and Identifier = string
-and Parameters = VariableDeclaration list
+and Parameters = VariableDeclarationStatement list
 and IdentifierRef = { Identifier : string }
 
 and Statement = 
+    | FunctionDeclarationStatement of FunctionDeclarationStatement
+    | VariableDeclarationStatement of VariableDeclarationStatement
     | ExpressionStatement of Expression
     | BlockStatement of BlockStatement
     | IfStatement of IfStatement
@@ -30,8 +28,7 @@ and Statement =
     | ReturnStatement of Expression option
     | BreakStatement
     
-and BlockStatement = VariablesScope * Statement list
-and VariablesScope = VariableDeclaration list
+and BlockStatement = Statement list
 and IfStatement = Expression * Statement * Statement option
 and WhileStatement = Expression * Statement
 

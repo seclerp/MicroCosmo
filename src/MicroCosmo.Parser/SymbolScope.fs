@@ -7,10 +7,10 @@ open System
 open System.Collections.Generic
 
 type SymbolScope(parent : SymbolScope option) =
-    let mutable list = List.empty<Ast.VariableDeclaration>
+    let mutable list = List.empty<Ast.VariableDeclarationStatement>
     
-    let identifierFromDeclaration (decl : Ast.VariableDeclaration) =
-        match decl with
+    let identifierFromDeclaration =
+        function
         | (i, _, _, _) -> i
     
     let declaresIdentifier (identifierRef : Ast.IdentifierRef) declaration =

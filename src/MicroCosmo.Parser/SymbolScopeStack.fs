@@ -15,4 +15,5 @@ type SymbolScopeStack() =
     
     member x.Push() = stack.Push(new SymbolScope(Some(stack.Peek())))
     member x.Pop() = stack.Pop() |> ignore
-    member x.AddDeclaration declaration = stack.Peek().AddDeclaration declaration
+    member x.AddDeclaration declaration = 
+        stack.Peek().AddDeclaration declaration
