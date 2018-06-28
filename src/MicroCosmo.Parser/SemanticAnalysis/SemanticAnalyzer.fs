@@ -1,8 +1,8 @@
 module MicroCosmo.SemanticAnalyzer
 
-open MicroCosmo.SemanticAnalysisResult
-open MicroCosmo.SymbolTable
-open MicroCosmo.FunctionTable
+open MicroCosmo.SemanticAnalysis.SemanticAnalysisResult
+open MicroCosmo.SemanticAnalysis.SymbolTable
+open MicroCosmo.SemanticAnalysis.FunctionTable
 open MicroCosmo.CompilerErrors
 open MicroCosmo.ExpressionTypeTable
 

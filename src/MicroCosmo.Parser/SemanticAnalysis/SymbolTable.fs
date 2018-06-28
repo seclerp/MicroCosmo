@@ -1,8 +1,8 @@
-module MicroCosmo.SymbolTable
+module MicroCosmo.SemanticAnalysis.SymbolTable
 
 open MicroCosmo
-open MicroCosmo.SymbolScopeStack
-open MicroCosmo.VariableType
+open MicroCosmo.SemanticAnalysis.SymbolScopeStack
+open MicroCosmo.SemanticAnalysis.VariableType
 open MicroCosmo.CompilerErrors
 
 open System

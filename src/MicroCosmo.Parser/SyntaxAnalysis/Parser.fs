@@ -1,9 +1,9 @@
-module MicroCosmo.Parser
+module MicroCosmo.SyntaxAnalysis.Parser
 
 open FParsec
 open MicroCosmo.Ast
 open MicroCosmo.Terminants
-open MicroCosmo.ParserHelpers
+open MicroCosmo.SyntaxAnalysis.ParserHelpers
 
 open MicroCosmo
 

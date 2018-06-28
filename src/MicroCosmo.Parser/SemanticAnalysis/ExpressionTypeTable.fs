@@ -2,9 +2,9 @@ module MicroCosmo.ExpressionTypeTable
 
 open System.Collections.Generic
 open MicroCosmo
-open MicroCosmo.SymbolTable
-open MicroCosmo.FunctionTable
-open MicroCosmo.VariableType
+open MicroCosmo.SemanticAnalysis.SymbolTable
+open MicroCosmo.SemanticAnalysis.FunctionTable
+open MicroCosmo.SemanticAnalysis.VariableType
 open MicroCosmo.CompilerErrors
 open System
 

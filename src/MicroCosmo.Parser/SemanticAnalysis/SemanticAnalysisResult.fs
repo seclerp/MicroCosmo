@@ -1,8 +1,8 @@
-module MicroCosmo.SemanticAnalysisResult
+module MicroCosmo.SemanticAnalysis.SemanticAnalysisResult
 
-open MicroCosmo.SymbolTable
+open MicroCosmo.SemanticAnalysis.SymbolTable
 open MicroCosmo.ExpressionTypeTable
-open MicroCosmo.FunctionTable
+open MicroCosmo.SemanticAnalysis.FunctionTable
 
 type SemanticAnalysisResult =
     {

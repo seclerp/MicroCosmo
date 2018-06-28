@@ -1,4 +1,4 @@
-module MicroCosmo.SymbolScope
+module MicroCosmo.SemanticAnalysis.SymbolScope
 
 open MicroCosmo
 open MicroCosmo.CompilerErrors

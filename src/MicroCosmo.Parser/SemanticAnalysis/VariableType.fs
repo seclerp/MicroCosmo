@@ -1,4 +1,4 @@
-module MicroCosmo.VariableType
+module MicroCosmo.SemanticAnalysis.VariableType
 
 open MicroCosmo
 

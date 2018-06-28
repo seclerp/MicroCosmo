@@ -1,7 +1,7 @@
-module MicroCosmo.FunctionTableEntry
+module MicroCosmo.SemanticAnalysis.FunctionTableEntry
 
 open MicroCosmo
-open MicroCosmo.VariableType
+open MicroCosmo.SemanticAnalysis.VariableType
 
 type FunctionTableEntry =
     {

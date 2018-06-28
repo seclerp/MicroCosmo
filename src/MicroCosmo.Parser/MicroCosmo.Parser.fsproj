@@ -16,18 +16,21 @@
     <PackageReference Include="Piglet" Version="1.4.0" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ParserHelpers.fs" />
-    <Compile Include="Parser.fs" />
-    <Compile Include="SymbolScope.fs" />
-    <Compile Include="SymbolScopeStack.fs" />
-    <Compile Include="VariableType.fs" />
-    <Compile Include="SymbolTable.fs" />
-    <Compile Include="FunctionTableEntry.fs" />
-    <Compile Include="FunctionTable.fs" />
+    <Compile Include="SyntaxAnalysis\ParserHelpers.fs" />
+    <Compile Include="SyntaxAnalysis\Parser.fs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExpressionTypeTable.fs" />
-    <Compile Include="SemanticAnalysisResult.fs" />
-    <Compile Include="SemanticAnalyzer.fs" />
+    <Compile Include="SemanticAnalysis\SymbolScope.fs" />
+    <Compile Include="SemanticAnalysis\SymbolScopeStack.fs" />
+    <Compile Include="SemanticAnalysis\VariableType.fs" />
+    <Compile Include="SemanticAnalysis\SymbolTable.fs" />
+    <Compile Include="SemanticAnalysis\FunctionTableEntry.fs" />
+    <Compile Include="SemanticAnalysis\FunctionTable.fs" />
+    <Compile Include="SemanticAnalysis\ExpressionTypeTable.fs" />
+    <Compile Include="SemanticAnalysis\SemanticAnalysisResult.fs" />
+    <Compile Include="SemanticAnalysis\SemanticAnalyzer.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="IR\ILBuilder.fs" />
   </ItemGroup>
 </Project>

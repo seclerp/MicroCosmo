@@ -1,9 +1,9 @@
-module MicroCosmo.FunctionTable
+module MicroCosmo.SemanticAnalysis.FunctionTable
 
 open MicroCosmo
 open MicroCosmo.CompilerErrors
-open MicroCosmo.VariableType
-open MicroCosmo.FunctionTableEntry
+open MicroCosmo.SemanticAnalysis.VariableType
+open MicroCosmo.SemanticAnalysis.FunctionTableEntry
 open System.Collections.Generic
 
 type FunctionTable(program) as self =

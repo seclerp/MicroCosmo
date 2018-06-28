@@ -1,7 +1,7 @@
-module MicroCosmo.SymbolScopeStack
+module MicroCosmo.SemanticAnalysis.SymbolScopeStack
 
 open MicroCosmo
-open MicroCosmo.SymbolScope
+open MicroCosmo.SemanticAnalysis.SymbolScope
 open MicroCosmo.CompilerErrors
 
 open System
