@@ -113,24 +113,6 @@ MicroCosmo supports several operators on different variable types.
 **Unary:**
 - `not [bool]` - logical "NOT"
 
-#### String only operators
-
-- `[string] + [string]` - string concatination
-- `[string] - [string]` - returns new string where first occurrence of string2 in string1 is removed
-- `[string] * [int]` - returns new string where given string repeats `int` times
-
-### Explicit cast
-
-MicroCosmo allows cast from one type to another using `to` operator by the given flow:
-
-- `int -> double` - safe cast without data loss (ex: `let d : double = 5 to double #5.0`)
-- `double -> int` - unsafe cast with data loss, only integer part remains (ex: `let i : int = 10.75 to int #10`)
-- `int -> bool` - false if a == 0, otherwise false (ex: `let b : bool = 15 to bool #true`)
-- `double -> bool` - false if a == 0.0, otherwise false (ex: `let b : bool = 45.8 to bool #true`)
-- `bool -> int` - 1 if a == true, otherwise 0 (ex: `let i : int = true to int #1`)
-- `bool -> double` - 1.0 if a == true, otherwise 0 (ex: `let d : double = true to double #1.0`)
-- `any -> string` - using .NET ToString (ex: let s : string = 123 to string)
-
 ### Implicit cast
 
 You can safely convert these types without data loss:
@@ -167,7 +149,7 @@ if (someBool) {
 Else block is optional:
 
 ```
-let a : int = readInt()
+let a : int = readint()
 let isFive : bool = a is 5
 if (isFive) {
   println("4 equals 5")
