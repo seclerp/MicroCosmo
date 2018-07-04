@@ -6,12 +6,13 @@ open MicroCosmo.SemanticAnalysis.SemanticAnalysisResult
 open MicroCosmo.IL
 open MicroCosmo
 
-type private ILVariableScope =
+type ILVariableScope =
     | FieldScope of ILVariable
     | ArgumentScope of int16
     | LocalScope of int16
 
-type private VariableMappingDictionary = Dictionary<Ast.VariableDeclarationStatement, ILVariableScope>
+type VariableMappingDictionary() = 
+    inherit Dictionary<Ast.VariableDeclarationStatement, ILVariableScope>(HashIdentity.Reference)
 
 module private ILBuilderUtilities =
     let typeOf =
@@ -23,12 +24,11 @@ module private ILBuilderUtilities =
         | Ast.String    -> typeof<string>
         | Ast.Any       -> typeof<System.Object>
 
-    let createILVariable decl = function
-        Ast.VariableDeclarationStatement(i, t, e, a) as d ->
-            {
-                ILVariable.Type = if a then (typeOf t).MakeArrayType() else typeOf t; 
-                Name = i;
-            }
+    let createILVariable (i, t, _, _) =
+        {
+            ILVariable.Type = typeOf t; 
+            Name = i;
+        }
 
 open ILBuilderUtilities
 
@@ -135,6 +135,7 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
             | Ast.IntLiteral(x)     -> [ ILOpCode.Ldc_I4 x ]
             | Ast.DoubleLiteral(x)  -> [ ILOpCode.Ldc_R8 x ]
             | Ast.BoolLiteral(x)    -> [ (if x then ILOpCode.Ldc_I4(1) else ILOpCode.Ldc_I4 0) ]
+            | Ast.StringLiteral(x)  -> [ ILOpCode.Ldstr x ]
         | Ast.ArrayAllocationExpression(t, e) ->
             List.concat [ processExpression e
                           [ ILOpCode.Newarr (typeOf t) ] ]
@@ -194,6 +195,7 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
             | Some(x) -> (processExpression x) @ [ ILOpCode.Ret ]
             | None    -> [ ILOpCode.Ret ]
         | Ast.BreakStatement -> [ ILOpCode.Br (currentWhileStatementEndLabel.Peek()) ]
+        | _ -> []
 
     let processVariableDeclaration (mutableIndex : byref<_>) f d =
         let v = createILVariable d
@@ -202,10 +204,20 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
         v
 
     let processLocalDeclaration declaration =
-        processVariableDeclaration &localIndex (fun i -> ILVariableScope.LocalScope(i)) declaration
+        processVariableDeclaration &localIndex (fun i -> LocalScope i) declaration
         
     let processParameter declaration =
-        processVariableDeclaration &argumentIndex (fun i -> ILVariableScope.ArgumentScope(i)) declaration
+        processVariableDeclaration &argumentIndex (fun i -> ArgumentScope i) declaration
+
+    let rec findLocalDeclarations statement =
+        let rec fromStatement =
+            function
+            | Ast.BlockStatement(bs) -> 
+                List.concat [ bs |> List.collect fromStatement ]
+                fromStatement result vds
+            | Ast.VariableDeclarationStatement(vds) -> 
+                List.concat [ createILVariable vds ]
+            | _ -> []
 
     let rec collectLocalDeclarations statement =
         let rec fromStatement =
@@ -257,18 +269,19 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
 
         fromStatement statement
 
-    member x.BuildMethod(returnType, name, parameters, (localDeclarations, statements)) =
+    member x.BuildMethod(name, parameters, returnType, blockStatement : Ast.Statement) =
+        let statements = match blockStatement with Ast.BlockStatement stmnts -> stmnts
+    
         {
             Name       = name;
             ReturnType = typeOf returnType;
             Parameters = parameters |> List.map processParameter;
-            Locals     = List.concat [ localDeclarations |> List.map processLocalDeclaration;
-                                       statements |> List.collect collectLocalDeclarations ]
+            Locals     = statements |> List.collect collectLocalDeclarations;
             Body       = statements |> List.collect processStatement;
         }
 
 type ILBuilder(semanticAnalysisResult) =
-    let variableMappings = new VariableMappingDictionary(HashIdentity.Reference)
+    let variableMappings = new VariableMappingDictionary()
 
     let processStaticVariableDeclaration d =
         let v = createILVariable d
@@ -333,7 +346,7 @@ type ILBuilder(semanticAnalysisResult) =
             } ]
 
         {
-            Fields  = variableDeclarations |> List.map processStaticVariableDeclaration;
+            Fields  = variableDeclarations |> List.map (fun x -> processStaticVariableDeclaration x);
             Methods = List.concat [ builtInMethods
                                     functionDeclarations |> List.map processFunctionDeclaration ];
         }

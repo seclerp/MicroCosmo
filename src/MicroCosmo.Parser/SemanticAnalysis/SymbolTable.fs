@@ -11,6 +11,8 @@ open System.Collections.Generic
 type SymbolTable(program) as self =
     inherit Dictionary<Ast.IdentifierRef, Ast.VariableDeclarationStatement>(HashIdentity.Reference)
     
+//    let sameIdentifierMap = Dictionary<string, string>()
+//    let sameIdentifierCounters = Dictionary<string, int>()
     let whileStatementStack = Stack<Ast.WhileStatement>()
     let symbolScopeStack = new SymbolScopeStack() 
 

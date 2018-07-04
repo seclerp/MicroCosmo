@@ -41,6 +41,7 @@ and ILOpCode =
     | Div
     | Label of ILLabel
     | Ldarg of int16
+    | Ldstr of string
     | Ldc_I4 of int
     | Ldc_R8 of float
     | Ldelem of Type

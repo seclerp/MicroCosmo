@@ -1,7 +1,8 @@
 ﻿open MicroCosmo
 open System
-open MicroCosmo.Parser
 open MicroCosmo.SemanticAnalyzer
+open MicroCosmo.SyntaxAnalysis.Parser
+open MicroCosmo.IR.ILBuilder
 
 [<EntryPoint>]
 let main argv =
@@ -29,7 +30,12 @@ let main argv =
                 let semanticAnalysisResult = analyze p
                 match semanticAnalysisResult with
                 | Error e ->    printfnColored (ConsoleColor.Red) "%A" e |> ignore
-                | Ok a ->       printfnColored (ConsoleColor.Yellow) "Semantic analysis: \n\n%A\n" a |> ignore
+                | Ok a ->       
+                    printfnColored (ConsoleColor.Yellow) "Semantic analysis: \n\n%A\n" a |> ignore
+                    let ilBuilder = new ILBuilder(a)
+                    let irResult = ilBuilder.BuildClass p
+                    
+                    printfnColored (ConsoleColor.Yellow) "Intermediate representation: \n\n%A\n" irResult |> ignore
                     
             printfn ""
             listen()
