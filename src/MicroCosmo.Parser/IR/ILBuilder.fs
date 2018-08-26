@@ -41,8 +41,10 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
     let currentWhileStatementEndLabel = Stack<ILLabel>()
 
     let lookupILVariableScope identifierRef =
-        let declaration = semanticAnalysisResult.SymbolTable.[identifierRef]
-        variableMappings.[declaration]
+        let a = Seq.head variableMappings.Keys
+        let b = semanticAnalysisResult.SymbolTable.[identifierRef]
+        let c = LanguagePrimitives.PhysicalEquality a b
+        variableMappings.[semanticAnalysisResult.SymbolTable.[identifierRef]]
 
     let makeLabel() =
         let result = labelIndex
@@ -209,15 +211,15 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
     let processParameter declaration =
         processVariableDeclaration &argumentIndex (fun i -> ArgumentScope i) declaration
 
-    let rec findLocalDeclarations statement =
-        let rec fromStatement =
-            function
-            | Ast.BlockStatement(bs) -> 
-                List.concat [ bs |> List.collect fromStatement ]
-                fromStatement result vds
-            | Ast.VariableDeclarationStatement(vds) -> 
-                List.concat [ createILVariable vds ]
-            | _ -> []
+    // let rec findLocalDeclarations statement =
+    //     let rec fromStatement =
+    //         function
+    //         | Ast.BlockStatement(bs) -> 
+    //             List.concat [ bs |> List.collect fromStatement ]
+    //             fromStatement result vds
+    //         | Ast.VariableDeclarationStatement(vds) -> 
+    //             List.concat [ createILVariable vds ]
+    //         | _ -> []
 
     let rec collectLocalDeclarations statement =
         let rec fromStatement =

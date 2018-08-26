@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
@@ -12,25 +12,21 @@
     <ProjectReference Include="..\MicroCosmo.Common\MicroCosmo.Common.fsproj" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="SyntaxAnalysis/ParserHelpers.fs" />
+    <Compile Include="SyntaxAnalysis/Parser.fs" />
+    <Compile Include="SemanticAnalysis/SymbolScope.fs" />
+    <Compile Include="SemanticAnalysis/SymbolScopeStack.fs" />
+    <Compile Include="SemanticAnalysis/VariableType.fs" />
+    <Compile Include="SemanticAnalysis/SymbolTable.fs" />
+    <Compile Include="SemanticAnalysis/FunctionTableEntry.fs" />
+    <Compile Include="SemanticAnalysis/FunctionTable.fs" />
+    <Compile Include="SemanticAnalysis/ExpressionTypeTable.fs" />
+    <Compile Include="SemanticAnalysis/SemanticAnalysisResult.fs" />
+    <Compile Include="SemanticAnalysis/SemanticAnalyzer.fs" />
+    <Compile Include="IR/ILBuilder.fs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="FParsec" Version="1.0.3" />
     <PackageReference Include="Piglet" Version="1.4.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="SyntaxAnalysis\ParserHelpers.fs" />
-    <Compile Include="SyntaxAnalysis\Parser.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="SemanticAnalysis\SymbolScope.fs" />
-    <Compile Include="SemanticAnalysis\SymbolScopeStack.fs" />
-    <Compile Include="SemanticAnalysis\VariableType.fs" />
-    <Compile Include="SemanticAnalysis\SymbolTable.fs" />
-    <Compile Include="SemanticAnalysis\FunctionTableEntry.fs" />
-    <Compile Include="SemanticAnalysis\FunctionTable.fs" />
-    <Compile Include="SemanticAnalysis\ExpressionTypeTable.fs" />
-    <Compile Include="SemanticAnalysis\SemanticAnalysisResult.fs" />
-    <Compile Include="SemanticAnalysis\SemanticAnalyzer.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="IR\ILBuilder.fs" />
   </ItemGroup>
 </Project>

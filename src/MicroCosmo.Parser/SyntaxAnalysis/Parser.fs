@@ -117,10 +117,10 @@ opp.AddOperator(InfixOperator(GT, ws, 2, Associativity.Left, fun x y ->     (bin
 
 opp.AddOperator(InfixOperator(AND, ws, 3, Associativity.Left, fun x y ->    (binary x Ast.And y)))
 
-opp.AddOperator(InfixOperator(PLUS, ws, 1, Associativity.Left, fun x y -> (binary x Ast.Sum y)))
-opp.AddOperator(InfixOperator(MINUS, ws, 1, Associativity.Left, fun x y -> (binary x Ast.Diff y)))
-opp.AddOperator(InfixOperator(ASTERISK, ws, 2, Associativity.Left, fun x y -> (binary x Ast.Mult y)))
-opp.AddOperator(InfixOperator(FORWARDSLASH, ws, 2, Associativity.Left, fun x y -> (binary x Ast.Div y)))
+opp.AddOperator(InfixOperator(PLUS, ws, 1, Associativity.Left, fun x y ->            (binary x Ast.Sum y)))
+opp.AddOperator(InfixOperator(MINUS, ws, 1, Associativity.Left, fun x y ->           (binary x Ast.Diff y)))
+opp.AddOperator(InfixOperator(ASTERISK, ws, 2, Associativity.Left, fun x y ->        (binary x Ast.Mult y)))
+opp.AddOperator(InfixOperator(FORWARDSLASH, ws, 2, Associativity.Left, fun x y ->    (binary x Ast.Div y)))
 opp.AddOperator(InfixOperator(DOUBLEASTERISK, ws, 3, Associativity.Right, fun x y -> (binary x Ast.Pow y)))
 
 opp.AddOperator(PrefixOperator(NOT, ws, 4, true, fun x -> (unary x Ast.Not)))
