@@ -15,10 +15,10 @@ let keyword s = str_ws s
 let symbol s = str_ws s
 let literal s = regex_ws s
 
-let unary (x : Ast.Expression) (y : Ast.UnaryOperator) : Ast.Expression = 
-    Ast.UnaryExpression(y, x)
-let binary (x : Ast.Expression) (y : Ast.BinaryOperator) (z : Ast.Expression) : Ast.Expression = 
-    Ast.BinaryExpression(x, y, z)
+let unary (x : Ast.Expression) (y : Ast.UnaryOperator) guid : Ast.Expression = 
+    Ast.UnaryExpression(y, x, guid)
+let binary (x : Ast.Expression) (y : Ast.BinaryOperator) (z : Ast.Expression) guid : Ast.Expression = 
+    Ast.BinaryExpression(x, y, z, guid)
     
 /// For debugging
 

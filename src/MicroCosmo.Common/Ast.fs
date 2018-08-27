@@ -1,8 +1,10 @@
 module MicroCosmo.Ast
+open System
 
 type Program = Statement list
 
-and VariableDeclarationStatement = Identifier * TypeSpec * Expression option * bool
+// Guid is unique component
+and VariableDeclarationStatement = Identifier * TypeSpec * Expression option * bool * Guid
 
 and TypeSpec =
     | NoneType
@@ -12,11 +14,13 @@ and TypeSpec =
     | Double
     | Bool
     
-and FunctionDeclarationStatement = Identifier * Parameters * TypeSpec * Statement
+and FunctionDeclarationStatement = Identifier * Parameters * TypeSpec * Statement * Guid
     
 and Identifier = string
 and Parameters = VariableDeclarationStatement list
-and IdentifierRef = { Identifier : string }
+
+// Guid is unique component
+and IdentifierRef = { Identifier : string; Guid : Guid }
 
 and Statement = 
     | FunctionDeclarationStatement of FunctionDeclarationStatement
@@ -33,16 +37,16 @@ and IfStatement = Expression * Statement * Statement option
 and WhileStatement = Expression * Statement
 
 and Expression = 
-    | VariableAssignmentExpression of IdentifierRef * Expression
-    | ArrayVariableAssignmentExpression of IdentifierRef * Expression * Expression
-    | BinaryExpression of Expression * BinaryOperator * Expression
-    | UnaryExpression of UnaryOperator * Expression
-    | IdentifierExpression of IdentifierRef
-    | ArrayIdentifierExpression of IdentifierRef * Expression
-    | FunctionCallExpression of Identifier * Arguments
-    | ArraySizeExpression of IdentifierRef
-    | LiteralExpression of Literal
-    | ArrayAllocationExpression of TypeSpec * Expression
+    | VariableAssignmentExpression of IdentifierRef * Expression * Guid
+    | ArrayVariableAssignmentExpression of IdentifierRef * Expression * Expression * Guid
+    | BinaryExpression of Expression * BinaryOperator * Expression * Guid
+    | UnaryExpression of UnaryOperator * Expression * Guid
+    | IdentifierExpression of IdentifierRef * Guid
+    | ArrayIdentifierExpression of IdentifierRef * Expression * Guid
+    | FunctionCallExpression of Identifier * Arguments * Guid
+    | ArraySizeExpression of IdentifierRef * Guid
+    | LiteralExpression of Literal * Guid
+    | ArrayAllocationExpression of TypeSpec * Expression * Guid
     | Empty
     
 and BinaryOperator =

@@ -11,12 +11,12 @@ type SymbolScope(parent : SymbolScope option) =
     
     let identifierFromDeclaration =
         function
-        | (i, _, _, _) -> i
+        | (i, _, _, _, _) -> i
     
     let declaresIdentifier (identifierRef : Ast.IdentifierRef) declaration =
         (identifierFromDeclaration declaration) = identifierRef.Identifier
     
-    member x.AddDeclaration declaration =
+    member x.AddDeclaration (declaration : Ast.VariableDeclarationStatement)=
         let ifd = identifierFromDeclaration
         if List.exists (fun x -> ifd x = ifd declaration) list then
             raise (variableAlreadyDefined (identifierFromDeclaration declaration))

@@ -1,0 +1,11 @@
+func fact(val : int) : int { 
+    if (val is 1) { 
+        return val 
+    }
+    
+    return (val * fact(val - 1)) 
+} 
+
+func main() {
+    println(fact(5)) 
+}

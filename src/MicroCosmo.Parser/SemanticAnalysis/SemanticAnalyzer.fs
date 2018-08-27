@@ -18,6 +18,10 @@ let analyze program =
         if not (functionTable.ContainsKey "main") then
             raise (missingEntryPoint())
         
+        let main = functionTable.["main"]
+        if (main.ParameterTypes <> []) then 
+            raise (missingEntryPoint())
+        
         let expressionTypes = new ExpressionTypeTable(program, functionTable, symbolTable)
         
         Result.Ok {

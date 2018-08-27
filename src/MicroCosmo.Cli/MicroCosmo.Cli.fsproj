@@ -16,4 +16,7 @@
     <ProjectReference Include="..\MicroCosmo.Common\MicroCosmo.Common.fsproj" />
     <ProjectReference Include="..\MicroCosmo.Parser\MicroCosmo.Parser.fsproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="program.mcos" />
+  </ItemGroup>
 </Project>

@@ -12,19 +12,21 @@ type ILVariableScope =
     | LocalScope of int16
 
 type VariableMappingDictionary() = 
-    inherit Dictionary<Ast.VariableDeclarationStatement, ILVariableScope>(HashIdentity.Reference)
+    inherit Dictionary<Ast.VariableDeclarationStatement, ILVariableScope>()
 
 module private ILBuilderUtilities =
+    open System
+
     let typeOf =
         function
-        | Ast.NoneType  -> typeof<System.Void>
+        | Ast.NoneType  -> typeof<Void>
         | Ast.Bool      -> typeof<bool>
         | Ast.Int       -> typeof<int>
         | Ast.Double    -> typeof<float>
         | Ast.String    -> typeof<string>
-        | Ast.Any       -> typeof<System.Object>
+        | Ast.Any       -> typeof<Object>
 
-    let createILVariable (i, t, _, _) =
+    let createILVariable (i, t, _, _, _) =
         {
             ILVariable.Type = typeOf t; 
             Name = i;
@@ -105,11 +107,11 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
 
     and processExpression expression =
         match expression with
-        | Ast.VariableAssignmentExpression(i, e) ->
+        | Ast.VariableAssignmentExpression(i, e, _) ->
             List.concat [ processExpression e
                           [ ILOpCode.Dup ]
                           processIdentifierStore i ]
-        | Ast.ArrayVariableAssignmentExpression(i, e1, e2) as ae ->
+        | Ast.ArrayVariableAssignmentExpression(i, e1, e2, _) as ae ->
             List.concat [ processIdentifierLoad i
                           processExpression e1
                           processExpression e2
@@ -117,28 +119,28 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
                           [ ILOpCode.Stloc arrayAssignmentLocals.[ae] ]
                           [ ILOpCode.Stelem (typeOf (semanticAnalysisResult.SymbolTable.GetIdentifierTypeSpec i).Type) ]
                           [ ILOpCode.Ldloc arrayAssignmentLocals.[ae] ] ]
-        | Ast.BinaryExpression(a, b, c) -> processBinaryExpression (a, b, c)
-        | Ast.UnaryExpression(op, e) ->
+        | Ast.BinaryExpression(a, b, c, _) -> processBinaryExpression (a, b, c)
+        | Ast.UnaryExpression(op, e, _) ->
             List.concat [ processExpression e
                           processUnaryOperator op]
-        | Ast.IdentifierExpression(i) -> processIdentifierLoad i
-        | Ast.ArrayIdentifierExpression(i, e) ->
+        | Ast.IdentifierExpression(i, _) -> processIdentifierLoad i
+        | Ast.ArrayIdentifierExpression(i, e, _) ->
             List.concat [ processIdentifierLoad i
                           processExpression e
                           [ ILOpCode.Ldelem (typeOf (semanticAnalysisResult.SymbolTable.GetIdentifierTypeSpec i).Type) ] ]
-        | Ast.FunctionCallExpression(i, a) ->
+        | Ast.FunctionCallExpression(i, a, _) ->
             List.concat [ a |> List.collect processExpression
                           [ ILOpCode.Call i ] ]
-        | Ast.ArraySizeExpression(i) ->
+        | Ast.ArraySizeExpression(i, _) ->
             List.concat [ processIdentifierLoad i
                           [ ILOpCode.Ldlen ] ]
-        | Ast.LiteralExpression(l) ->
+        | Ast.LiteralExpression(l, _) ->
             match l with
             | Ast.IntLiteral(x)     -> [ ILOpCode.Ldc_I4 x ]
             | Ast.DoubleLiteral(x)  -> [ ILOpCode.Ldc_R8 x ]
             | Ast.BoolLiteral(x)    -> [ (if x then ILOpCode.Ldc_I4(1) else ILOpCode.Ldc_I4 0) ]
             | Ast.StringLiteral(x)  -> [ ILOpCode.Ldstr x ]
-        | Ast.ArrayAllocationExpression(t, e) ->
+        | Ast.ArrayAllocationExpression(t, e, _) ->
             List.concat [ processExpression e
                           [ ILOpCode.Newarr (typeOf t) ] ]
 
@@ -199,27 +201,17 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
         | Ast.BreakStatement -> [ ILOpCode.Br (currentWhileStatementEndLabel.Peek()) ]
         | _ -> []
 
-    let processVariableDeclaration (mutableIndex : byref<_>) f d =
+    let processVariableDeclaration (mutableIndex : byref<_>) f (d : Ast.VariableDeclarationStatement) =
         let v = createILVariable d
         variableMappings.Add(d, f mutableIndex)
         mutableIndex <- mutableIndex + 1s
         v
 
-    let processLocalDeclaration declaration =
+    let processLocalDeclaration (declaration : Ast.VariableDeclarationStatement) =
         processVariableDeclaration &localIndex (fun i -> LocalScope i) declaration
         
-    let processParameter declaration =
+    let processParameter (declaration : Ast.VariableDeclarationStatement) =
         processVariableDeclaration &argumentIndex (fun i -> ArgumentScope i) declaration
-
-    // let rec findLocalDeclarations statement =
-    //     let rec fromStatement =
-    //         function
-    //         | Ast.BlockStatement(bs) -> 
-    //             List.concat [ bs |> List.collect fromStatement ]
-    //             fromStatement result vds
-    //         | Ast.VariableDeclarationStatement(vds) -> 
-    //             List.concat [ createILVariable vds ]
-    //         | _ -> []
 
     let rec collectLocalDeclarations statement =
         let rec fromStatement =
@@ -252,8 +244,8 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
 
         and fromExpression =
             function
-            | Ast.VariableAssignmentExpression(i, e) -> fromExpression e
-            | Ast.ArrayVariableAssignmentExpression(i, e1, e2) as ae ->
+            | Ast.VariableAssignmentExpression(i, e, _) -> fromExpression e
+            | Ast.ArrayVariableAssignmentExpression(i, e1, e2, _) as ae ->
                 let v = {
                     ILVariable.Type = typeOf ((semanticAnalysisResult.SymbolTable.GetIdentifierTypeSpec i).Type); 
                     Name = "ArrayAssignmentTemp" + string localIndex;
@@ -262,16 +254,16 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
                 localIndex <- localIndex + 1s
                 List.concat [ [ v ]; fromExpression e2 ]
                 
-            | Ast.BinaryExpression(l, op, r)      -> List.concat [ fromExpression l; fromExpression r; ]
-            | Ast.UnaryExpression(op, e)          -> fromExpression e
-            | Ast.ArrayIdentifierExpression(i, e) -> fromExpression e
-            | Ast.FunctionCallExpression(i, a)    -> a |> List.collect fromExpression
-            | Ast.ArrayAllocationExpression(t, e) -> fromExpression e
+            | Ast.BinaryExpression(l, op, r, _)      -> List.concat [ fromExpression l; fromExpression r; ]
+            | Ast.UnaryExpression(op, e, _)          -> fromExpression e
+            | Ast.ArrayIdentifierExpression(i, e, _) -> fromExpression e
+            | Ast.FunctionCallExpression(i, a, _)    -> a |> List.collect fromExpression
+            | Ast.ArrayAllocationExpression(t, e, _) -> fromExpression e
             | _ -> []
 
         fromStatement statement
 
-    member x.BuildMethod(name, parameters, returnType, blockStatement : Ast.Statement) =
+    member x.BuildMethod(name, parameters, returnType, blockStatement : Ast.Statement, _) =
         let statements = match blockStatement with Ast.BlockStatement stmnts -> stmnts
     
         {
@@ -285,7 +277,7 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
 type ILBuilder(semanticAnalysisResult) =
     let variableMappings = new VariableMappingDictionary()
 
-    let processStaticVariableDeclaration d =
+    let processStaticVariableDeclaration (d : Ast.VariableDeclarationStatement) =
         let v = createILVariable d
         variableMappings.Add(d, ILVariableScope.FieldScope(v))
         v
@@ -302,10 +294,10 @@ type ILBuilder(semanticAnalysisResult) =
             program
             |> List.choose (fun x ->
                 match x with
-                | Ast.FunctionDeclarationStatement(_, _, _, _ as a) -> Some a
+                | Ast.FunctionDeclarationStatement a -> Some a
                 | _ -> None)
 
-        let processFunctionDeclaration functionDeclaration =
+        let processFunctionDeclaration (functionDeclaration : Ast.FunctionDeclarationStatement)=
             let ilMethodBuilder = new ILMethodBuilder(semanticAnalysisResult, variableMappings)
             ilMethodBuilder.BuildMethod functionDeclaration
 

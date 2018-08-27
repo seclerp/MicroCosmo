@@ -5,7 +5,10 @@ open MicroCosmo.Ast
 open MicroCosmo.Terminants
 open MicroCosmo.SyntaxAnalysis.ParserHelpers
 
+open System
 open MicroCosmo
+
+let getGuid = Guid.NewGuid
 
 let typeSpec : Parser<Ast.TypeSpec, unit> = 
     choice_ws [
@@ -63,18 +66,18 @@ let arrayAllocationExpression : Parser<Ast.Expression, unit>  =
     let typeSpec_ws = typeSpec .>> ws
     let array_ws = regex_ws ARRAY .>> ws
     (typeSpec_ws .>> array_ws) .>>. expression 
-        |>> (fun (a, b) -> Ast.ArrayAllocationExpression (a, b))
+        |>> (fun (a, b) -> Ast.ArrayAllocationExpression (a, b, getGuid()))
     
 let literalExpression : Parser<Ast.Expression, unit> = 
     literal 
-        |>> (fun a -> Ast.LiteralExpression a)
+        |>> (fun a -> Ast.LiteralExpression (a, getGuid()))
 
 let assignmentExpression : Parser<Ast.Expression, unit> = 
     choice_ws [
         attempt (pipe3 (identifier) (symbol OPENSQUARE >>. expression .>> symbol CLOSESQUARE) (symbol EQ >>. expression) 
-            (fun a b c -> Ast.ArrayVariableAssignmentExpression ({ Identifier = a }, b, c))) ;
+            (fun a b c -> Ast.ArrayVariableAssignmentExpression ({ Identifier = a; Guid = getGuid(); }, b, c, getGuid())));
         (pipe2 (identifier) (symbol EQ >>. expression)
-            (fun a b -> Ast.VariableAssignmentExpression ({ Identifier = a }, b))) ;
+            (fun a b -> Ast.VariableAssignmentExpression ({ Identifier = a; Guid = getGuid() }, b, getGuid()))) ;
     ]
     
 let arguments : Parser<Ast.Arguments, unit> = sepBy_ws expression (symbol COMMA)
@@ -82,10 +85,10 @@ let arguments : Parser<Ast.Arguments, unit> = sepBy_ws expression (symbol COMMA)
 let identifierExpression : Parser<Ast.Expression, unit> =
     choice_ws [
         attempt (pipe2 (identifier) (symbol OPENSQUARE >>. expression .>> symbol CLOSESQUARE)
-            (fun a b -> Ast.ArrayIdentifierExpression ({ Identifier = a }, b)));
+            (fun a b -> Ast.ArrayIdentifierExpression ({ Identifier = a; Guid = getGuid(); }, b, getGuid())));
         attempt (pipe2 (identifier) (symbol OPENPAREN >>. arguments .>> symbol CLOSEPAREN)
-            (fun a b -> Ast.FunctionCallExpression (a, b))) ;
-        identifier |>> (fun x -> Ast.IdentifierExpression ({ Identifier = x })) ;
+            (fun a b -> Ast.FunctionCallExpression (a, b, getGuid()))) ;
+        identifier |>> (fun x -> Ast.IdentifierExpression ({ Identifier = x; Guid = getGuid(); }, getGuid())) ;
 
     ]
 
@@ -106,26 +109,26 @@ let termParser =
     
 opp.TermParser <- termParser
 
-opp.AddOperator(InfixOperator(OR, ws, 1, Associativity.Left, fun x y ->     (binary x Ast.Eq y)))
-opp.AddOperator(InfixOperator(IS, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Eq y)))
+opp.AddOperator(InfixOperator(OR, ws, 1, Associativity.Left, fun x y ->     (binary x Ast.Eq y (getGuid()))))
+opp.AddOperator(InfixOperator(IS, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Eq y (getGuid()))))
 
-opp.AddOperator(InfixOperator(LTEQ, ws, 2, Associativity.Left, fun x y ->   (binary x Ast.LtEq y)))
-opp.AddOperator(InfixOperator(LT, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Lt y)))
+opp.AddOperator(InfixOperator(LTEQ, ws, 2, Associativity.Left, fun x y ->   (binary x Ast.LtEq y (getGuid()))))
+opp.AddOperator(InfixOperator(LT, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Lt y (getGuid()))))
 
-opp.AddOperator(InfixOperator(GTEQ, ws, 2, Associativity.Left, fun x y ->   (binary x Ast.GtEq y)))
-opp.AddOperator(InfixOperator(GT, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Gt y)))
+opp.AddOperator(InfixOperator(GTEQ, ws, 2, Associativity.Left, fun x y ->   (binary x Ast.GtEq y (getGuid()))))
+opp.AddOperator(InfixOperator(GT, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Gt y (getGuid()))))
 
-opp.AddOperator(InfixOperator(AND, ws, 3, Associativity.Left, fun x y ->    (binary x Ast.And y)))
+opp.AddOperator(InfixOperator(AND, ws, 3, Associativity.Left, fun x y ->    (binary x Ast.And y (getGuid()))))
 
-opp.AddOperator(InfixOperator(PLUS, ws, 1, Associativity.Left, fun x y ->            (binary x Ast.Sum y)))
-opp.AddOperator(InfixOperator(MINUS, ws, 1, Associativity.Left, fun x y ->           (binary x Ast.Diff y)))
-opp.AddOperator(InfixOperator(ASTERISK, ws, 2, Associativity.Left, fun x y ->        (binary x Ast.Mult y)))
-opp.AddOperator(InfixOperator(FORWARDSLASH, ws, 2, Associativity.Left, fun x y ->    (binary x Ast.Div y)))
-opp.AddOperator(InfixOperator(DOUBLEASTERISK, ws, 3, Associativity.Right, fun x y -> (binary x Ast.Pow y)))
+opp.AddOperator(InfixOperator(PLUS, ws, 1, Associativity.Left, fun x y ->            (binary x Ast.Sum y (getGuid()))))
+opp.AddOperator(InfixOperator(MINUS, ws, 1, Associativity.Left, fun x y ->           (binary x Ast.Diff y (getGuid()))))
+opp.AddOperator(InfixOperator(ASTERISK, ws, 2, Associativity.Left, fun x y ->        (binary x Ast.Mult y (getGuid()))))
+opp.AddOperator(InfixOperator(FORWARDSLASH, ws, 2, Associativity.Left, fun x y ->    (binary x Ast.Div y (getGuid()))))
+opp.AddOperator(InfixOperator(DOUBLEASTERISK, ws, 3, Associativity.Right, fun x y -> (binary x Ast.Pow y (getGuid()))))
 
-opp.AddOperator(PrefixOperator(NOT, ws, 4, true, fun x -> (unary x Ast.Not)))
-opp.AddOperator(PrefixOperator(MINUS, ws, 4, true, fun x -> (unary x Ast.Minus)))
-opp.AddOperator(PrefixOperator(PLUS, ws, 4, true, fun x -> (unary x Ast.Plus)))
+opp.AddOperator(PrefixOperator(NOT, ws, 4, true, fun x -> (unary x Ast.Not (getGuid()))))
+opp.AddOperator(PrefixOperator(MINUS, ws, 4, true, fun x -> (unary x Ast.Minus (getGuid()))))
+opp.AddOperator(PrefixOperator(PLUS, ws, 4, true, fun x -> (unary x Ast.Plus (getGuid()))))
 
 
 do expressionImpl := 
@@ -176,9 +179,9 @@ let expressionStatement : Parser<Ast.Statement, unit> =
 let parameterStatement : Parser<Ast.VariableDeclarationStatement, unit> =
     choice_ws [
         attempt (pipe2 (identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
-            (fun a b -> (a, b, None, true))) ;
+            (fun a b -> (a, b, None, true, getGuid()))) ;
         (pipe2 (identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> (a, b, None, false))) ;
+            (fun a b -> (a, b, None, false, getGuid()))) ;
     ]
 
 let parametersStatement : Parser<Ast.Parameters, unit> = sepBy_ws parameterStatement (symbol COMMA)
@@ -187,22 +190,22 @@ let functionDeclarationStatement : Parser<Ast.Statement, unit> =
     choice_ws [
         attempt (pipe4 (keyword FUNC >>. identifier) (symbol OPENPAREN >>. parametersStatement .>> symbol CLOSEPAREN)
             (symbol COLON >>. typeSpec) (blockStatement)
-            (fun a b c d -> Ast.FunctionDeclarationStatement (a, b, c, d))) ;
+            (fun a b c d -> Ast.FunctionDeclarationStatement (a, b, c, d, getGuid()))) ;
         (pipe3 (keyword FUNC >>. identifier) (symbol OPENPAREN >>. parametersStatement .>> symbol CLOSEPAREN)
             (blockStatement)
-            (fun a b c -> Ast.FunctionDeclarationStatement (a, b, Ast.NoneType, c))) ;
+            (fun a b c -> Ast.FunctionDeclarationStatement (a, b, Ast.NoneType, c, getGuid()))) ;
     ]
 
 let variableDeclarationStatement : Parser<Ast.Statement, unit> = 
     choice_ws [
         attempt (pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) (symbol EQ >>. expression)
-            (fun a b c -> Ast.VariableDeclarationStatement (a, b, Some c, true))) ;
+            (fun a b c -> Ast.VariableDeclarationStatement (a, b, Some c, true, getGuid()))) ;
         attempt (pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) (symbol EQ >>. expression)
-            (fun a b c -> Ast.VariableDeclarationStatement (a, b, Some c, false))) ;
+            (fun a b c -> Ast.VariableDeclarationStatement (a, b, Some c, false, getGuid()))) ;
         attempt (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
-            (fun a b -> Ast.VariableDeclarationStatement (a, b, None, true))) ;
+            (fun a b -> Ast.VariableDeclarationStatement (a, b, None, true, getGuid()))) ;
         (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> Ast.VariableDeclarationStatement (a, b, None, false))) ;
+            (fun a b -> Ast.VariableDeclarationStatement (a, b, None, false, getGuid()))) ;
     ]
     
 
