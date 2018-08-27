@@ -18,8 +18,10 @@ type FunctionTable(program) as self =
             self.Add(i, { ReturnType = t; ParameterTypes = List.map typeOfDeclaration p; })
     do
         // Built-in functions
-        self.Add("print",       { ReturnType = Ast.NoneType;    ParameterTypes = [{ Type = Ast.Any; IsArray = false }]; })
-        self.Add("println",     { ReturnType = Ast.NoneType;    ParameterTypes = [{ Type = Ast.Any; IsArray = false }]; })
+        self.Add("print",       { ReturnType = Ast.NoneType;    ParameterTypes = [{ Type = Ast.String; IsArray = false }]; })
+        self.Add("println",     { ReturnType = Ast.NoneType;    ParameterTypes = [{ Type = Ast.String; IsArray = false }]; })
+        self.Add("printi",      { ReturnType = Ast.NoneType;    ParameterTypes = [{ Type = Ast.Int; IsArray = false }]; })
+        self.Add("printlni",    { ReturnType = Ast.NoneType;    ParameterTypes = [{ Type = Ast.Int; IsArray = false }]; })
         self.Add("readstr",     { ReturnType = Ast.String;      ParameterTypes = []; })
         self.Add("readint",     { ReturnType = Ast.Int;         ParameterTypes = []; })
         self.Add("readreal",    { ReturnType = Ast.Double;      ParameterTypes = []; })

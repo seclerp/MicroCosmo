@@ -332,12 +332,30 @@ type ILBuilder(semanticAnalysisResult) =
             {
                 Name = "print";
                 ReturnType = typeof<System.Void>;
-                Parameters = [ { Type = typeof<float>; Name = "value"; }];
+                Parameters = [ { Type = typeof<obj>; Name = "value"; }];
                 Locals = [];
                 Body = [ Ldarg(0s)
                          CallClr(typeof<System.Console>.GetMethod("Write", [| typeof<System.Object> |]))
                          Ret ];
-            } ]
+            };
+            {
+                Name = "printlni";
+                ReturnType = typeof<System.Void>;
+                Parameters = [ { Type = typeof<int>; Name = "value"; }];
+                Locals = [];
+                Body = [ Ldarg(0s)
+                         CallClr(typeof<System.Console>.GetMethod("WriteLine", [| typeof<int> |]))
+                         Ret ];
+            };
+            {
+                Name = "printi";
+                ReturnType = typeof<System.Void>;
+                Parameters = [ { Type = typeof<int>; Name = "value"; }];
+                Locals = [];
+                Body = [ Ldarg(0s)
+                         CallClr(typeof<System.Console>.GetMethod("Write", [| typeof<int> |]))
+                         Ret ];
+            };]
 
         {
             Fields  = variableDeclarations |> List.map (fun x -> processStaticVariableDeclaration x);

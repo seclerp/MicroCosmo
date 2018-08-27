@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>net47</TargetFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <OutputPath>..\..\bin\Debug\netcoreapp2.0\</OutputPath>
@@ -14,6 +14,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MicroCosmo.Common\MicroCosmo.Common.fsproj" />
+    <ProjectReference Include="..\MicroCosmo.Emit\MicroCosmo.Emit.fsproj" />
     <ProjectReference Include="..\MicroCosmo.Parser\MicroCosmo.Parser.fsproj" />
   </ItemGroup>
   <ItemGroup>

@@ -1,15 +1,23 @@
 ﻿open MicroCosmo
 open System
+open System.IO
 open MicroCosmo.SemanticAnalyzer
 open MicroCosmo.SyntaxAnalysis.Parser
 open MicroCosmo.IR.ILBuilder
+open MicroCosmo.Emit.Compiler
 
 let InputFileKeys = ["-i"; "--input"]
 let OutputFilekeys = ["-o"; "--output"]
+let Compile = ["-o"; "--output"]
+
+type Mode =
+    | Compile
+    | Interactive
 
 type CommandLineOptions = {
     InputFile : string;
     OutputFile : string;
+    Mode : Mode;
 }
 
 [<EntryPoint>]
@@ -19,8 +27,9 @@ let main argv =
     
     let processCommandLineArgs args =
         let defaultOptions = {
-            InputFile = "program.mcos";
-            OutputFile = "program.exe";
+            InputFile = Path.Combine(Directory.GetCurrentDirectory(), "program.mcos");
+            OutputFile = Path.Combine(Directory.GetCurrentDirectory(), "program.exe");
+            Mode = Compile
         }
     
         let rec processCommandLineArgsRec args (optionsSoFar : CommandLineOptions) =
@@ -85,5 +94,12 @@ let main argv =
             //printfn "%A" result
         with
         | _ as ex -> printfnColored (ConsoleColor.Red) "%A" ex
-    listen()
+    
+    let compile inputPath outputPath =
+        let inputText = File.ReadAllText inputPath
+        compileToFile outputPath inputText
+        
+    match options.Mode with
+    | Interactive -> listen()
+    | Compile -> compile options.InputFile options.OutputFile
     0 // return an integer exit code

@@ -156,6 +156,10 @@ let returnStatement : Parser<Ast.Statement, unit> =
                 (keyword RETURN |>> (fun _ -> Ast.ReturnStatement None)) ;
     ]
 
+let blockStatement =
+    symbol OPENCURLY >>. statements .>> symbol CLOSECURLY |>>
+        (fun a -> Ast.BlockStatement (a))
+    
 let ifStatement : Parser<Ast.Statement, unit> =
     choice_ws [
         attempt (pipe3 (keyword IF >>. symbol OPENPAREN >>. expression .>> symbol CLOSEPAREN) (statement) (keyword ELSE >>. statement)
@@ -163,13 +167,9 @@ let ifStatement : Parser<Ast.Statement, unit> =
         (pipe2 (keyword IF >>. symbol OPENPAREN >>. expression .>> symbol CLOSEPAREN) (statement) 
             (fun a b -> Ast.IfStatement (a, b, None)));
     ]
-
-let blockStatement =
-    symbol OPENCURLY >>. statements .>> symbol CLOSECURLY |>>
-        (fun a -> Ast.BlockStatement (a))
         
 let whileStatement : Parser<Ast.Statement, unit> =
-    pipe2 (keyword WHILE >>. symbol OPENPAREN >>. expression .>> symbol CLOSEPAREN) (symbol OPENCURLY >>. statement .>> symbol CLOSECURLY) 
+    pipe2 (keyword WHILE >>. symbol OPENPAREN >>. expression .>> symbol CLOSEPAREN) (statement) 
         (fun a b -> Ast.WhileStatement (a, b))
 
 let expressionStatement : Parser<Ast.Statement, unit> =
@@ -189,7 +189,7 @@ let parametersStatement : Parser<Ast.Parameters, unit> = sepBy_ws parameterState
 let functionDeclarationStatement : Parser<Ast.Statement, unit> = 
     choice_ws [
         attempt (pipe4 (keyword FUNC >>. identifier) (symbol OPENPAREN >>. parametersStatement .>> symbol CLOSEPAREN)
-            (symbol COLON >>. typeSpec) (blockStatement)
+            (symbol COLON >>. typeSpec <!> "asasas") (blockStatement)
             (fun a b c d -> Ast.FunctionDeclarationStatement (a, b, c, d, getGuid()))) ;
         (pipe3 (keyword FUNC >>. identifier) (symbol OPENPAREN >>. parametersStatement .>> symbol CLOSEPAREN)
             (blockStatement)
@@ -214,14 +214,12 @@ do statementImpl :=
         attempt functionDeclarationStatement ;
         attempt variableDeclarationStatement ;
         attempt ifStatement ;
-        attempt whileStatement ;
+        attempt whileStatement;
         attempt returnStatement ;
         attempt breakStatement ;
         attempt blockStatement ;
         expressionStatement ;
     ]
-
-
 
 /// Declarations
 

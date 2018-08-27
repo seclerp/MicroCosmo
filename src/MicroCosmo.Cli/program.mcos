@@ -1,11 +1,15 @@
 func fact(val : int) : int { 
     if (val is 1) { 
-        return val 
+        return 1
     }
     
-    return (val * fact(val - 1)) 
+    return (val * fact(val - 1))
 } 
 
 func main() {
-    println(fact(5)) 
+    let a : int
+    a = 0
+    while (a < 6) {
+        printlni(fact(a))
+    }
 }
