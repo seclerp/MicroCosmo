@@ -33,6 +33,7 @@ module private ILBuilderUtilities =
         }
 
 open ILBuilderUtilities
+open MicroCosmo.Ast
 
 type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
                      variableMappings : VariableMappingDictionary) =
@@ -75,9 +76,28 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
                           [ ILOpCode.Label leftIsTrueLabel ]
                           processExpression r
                           [ ILOpCode.Label endLabel ] ]
-        | (l, op, r) -> List.concat [ (processExpression l);
-                                      (processExpression r);
-                                      [ processBinaryOperator op ] ]
+        | (l, op, r) -> 
+            let leftProcessed = processExpression l
+            let rightProcessed = processExpression r
+            
+            if op = Ast.Sum then
+                let leftType = semanticAnalysisResult.ExpressionTypes.[l].Type
+                let rightType = semanticAnalysisResult.ExpressionTypes.[r].Type
+                
+                match (leftType, rightType) with
+                | (Ast.String, Ast.String) -> List.concat [ leftProcessed;
+                                                            rightProcessed;
+                                                            [ processStringConcatOperator ] ]
+                | _ -> List.concat [ leftProcessed;
+                                     rightProcessed;
+                                     [ processBinaryOperator op ] ]
+            else
+                List.concat [ leftProcessed;
+                              rightProcessed;
+                              [ processBinaryOperator op ] ]
+                              
+    and processStringConcatOperator =
+        ILOpCode.CallClr(typeof<System.String>.GetMethod("Concat", [| typeof<System.String>; typeof<System.String> |]))
 
     and processBinaryOperator =
         function
@@ -305,6 +325,14 @@ type ILBuilder(semanticAnalysisResult) =
             ilMethodBuilder.BuildMethod functionDeclaration
 
         let builtInMethods = [
+            {
+                Name = "readstr";
+                ReturnType = typeof<string>;
+                Parameters = [];
+                Locals = [];
+                Body = [ CallClr(typeof<System.Console>.GetMethod("ReadLine"))
+                         Ret ];
+            };
             {
                 Name = "readint";
                 ReturnType = typeof<int>;

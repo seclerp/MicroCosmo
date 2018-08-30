@@ -8,10 +8,19 @@ func fact(val : int) : int {
     return (val * fact(val - 1))
 } 
 
-func main() {
+func main1() {
     a = 1
     while (a < 6) {
         printlni(fact(a))
         a = a + 1
     }
+}
+
+func main() {
+    let hello : string
+    hello = "Hello, "
+    let name : string
+    println("Enter name: ")
+    name = readstr()
+    println(hello + name)
 }
