@@ -240,6 +240,9 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
             | Ast.ReturnStatement(Some(e)) ->
                 List.concat [ fromExpression e ]
                 
+            | Ast.VariableDeclarationStatement decl -> 
+                [ processLocalDeclaration decl ]
+                
             | _ -> []
 
         and fromExpression =
@@ -287,7 +290,7 @@ type ILBuilder(semanticAnalysisResult) =
             program
             |> List.choose (fun x ->
                 match x with
-                | Ast.VariableDeclarationStatement(x) -> Some(x)
+                | Ast.VariableDeclarationStatement x -> Some x
                 | _ -> None)
     
         let functionDeclarations =

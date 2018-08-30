@@ -1,5 +1,7 @@
+let a : int
+
 func fact(val : int) : int { 
-    if (val is 1) { 
+    if (val <= 1) { 
         return 1
     }
     
@@ -7,9 +9,9 @@ func fact(val : int) : int {
 } 
 
 func main() {
-    let a : int
-    a = 0
+    a = 1
     while (a < 6) {
         printlni(fact(a))
+        a = a + 1
     }
 }
