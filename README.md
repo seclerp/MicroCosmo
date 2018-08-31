@@ -14,7 +14,7 @@ This repo contains:
 
 MicroCosmo is a **strongly**, **static** typed programming language.
 
-Memory management done by GC.
+Memory management done by CLR's GC.
 
 ### Comments
 
@@ -30,8 +30,6 @@ MicroCosmo supports builtin types:
 - `int` - 32-bit integer type
 - `bool` - Boolean value
 - `double` - 64-bit double-precision floating point type
-- `any` - special type, can contain any other type
-- `[type] array` - array of some type
 
 ### Literals
 
@@ -44,7 +42,7 @@ Builtin types may be instantiated using literals:
 
 ### Variable declaration
 
-Variable declaration looks like this:
+Variable declaration looks like:
 
 `let variableName : variableType = someExpression`
 
@@ -54,16 +52,11 @@ Last part is optional and can be omitted:
 
 Variable **always must have type declaration** in MicroCosmo.
 
-Array variable:
-`let someIntArray : int array`
-
-`let tenStringsArray : string array = string array[10]`
-
 ### Variables scope
 
 Scope of variables is defined inside block statements (`{ }`)
 
-Each `if`, `else`, `while`, `function` declaration declares also a inner variable scope.
+Each `if`, `else`, `while`, `func` declaration declares also a inner variable scope.
 
 Main variable scope is called "global scope"
 
@@ -72,8 +65,8 @@ Main variable scope is called "global scope"
 MicroCosmo supports several operators on different variable types.
 
 #### Operators of any type
-- `[any] is [any]` - equals
-- `[any] is not [any]` - not equals
+- `[expression] is [expression]` - equals
+- `[expression] is not [expression]` - not equals
 
 #### Numeric only operators
 `number` - `double` or `int`
@@ -99,10 +92,6 @@ MicroCosmo supports several operators on different variable types.
 **Unary:**
 - `+ [number]` - keep sign
 - `- [number]` - change sign
-- `[number] ++` - unary return current, add 1 and assign new value
-- `[number] --` - binary return current, subtract 1 and assign new value
-- `++ [number]` - binary add 1, assign new value and return
-- `-- [number]` - binary subtract 1, and assign new value and return
 
 #### Bool only operators
 
@@ -113,21 +102,10 @@ MicroCosmo supports several operators on different variable types.
 **Unary:**
 - `not [bool]` - logical "NOT"
 
-### Implicit cast
-
-You can safely convert these types without data loss:
-- `[any type] -> any`
-- `int -> double`
-
-Also, numeric binary operations automatically casts to biggest type:
-- `int + double = double`
-
-Other types of implicit casts will throw an exception.
-
 ### Built-in functions
 
-- `print(a : any)` - prints given value into screen
-- `println(a : any)` - prints given value into screen and adds newline character
+- `print(a : string)` - prints given string value into screen
+- `println(a : string)` - prints given string value into screen and adds newline character
 - `readstr() : string` - gets string from input
 - `readint() : int` - reads next integer number 
 - `readreal() : double` - reads next double number 
@@ -185,19 +163,19 @@ Example:
 ```
 # Returns true if integer is positive, otherwise false
 func sign(value : int) : bool {
-  return value >= 0
+  return value > 0
 }
 ```
 ### Program structure
 
 Programs written in MicroCosmo must have function `main` with signature:
-`function main(args : string array)`
+`func main()`
 
 Main function is the entry point for every program.
 
 Example:
 ```
-func main(args : string array) {
+func main() {
   # ...
 }
 ```
