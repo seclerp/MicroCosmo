@@ -13,7 +13,6 @@ let getGuid = Guid.NewGuid
 let typeSpec : Parser<Ast.TypeSpec, unit> = 
     choice_ws [
         attempt (keyword NONE    |>> (fun _ -> Ast.NoneType)) ;
-        attempt (keyword ANY     |>> (fun _ -> Ast.Any)) ;
         attempt (keyword STRING  |>> (fun _ -> Ast.String)) ;
         attempt (keyword INT     |>> (fun _ -> Ast.Int)) ;
         attempt (keyword DOUBLE  |>> (fun _ -> Ast.Double)) ;
@@ -22,8 +21,6 @@ let typeSpec : Parser<Ast.TypeSpec, unit> =
 
 let identifier : Parser<Ast.Identifier, unit> = 
     regex_ws IDENTIFIER |>> (fun a -> string a)
-
-
 
 /// Literals
 
@@ -62,37 +59,22 @@ let literal : Parser<Ast.Literal, unit> =
 
 let expression, expressionImpl = createParserForwardedToRef()
 
-let arrayAllocationExpression : Parser<Ast.Expression, unit>  =
-    let typeSpec_ws = typeSpec .>> ws
-    let array_ws = regex_ws ARRAY .>> ws
-    (typeSpec_ws .>> array_ws) .>>. expression 
-        |>> (fun (a, b) -> Ast.ArrayAllocationExpression (a, b, getGuid()))
-    
 let literalExpression : Parser<Ast.Expression, unit> = 
     literal 
         |>> (fun a -> Ast.LiteralExpression (a, getGuid()))
 
 let assignmentExpression : Parser<Ast.Expression, unit> = 
-    choice_ws [
-        attempt (pipe3 (identifier) (symbol OPENSQUARE >>. expression .>> symbol CLOSESQUARE) (symbol EQ >>. expression) 
-            (fun a b c -> Ast.ArrayVariableAssignmentExpression ({ Identifier = a; Guid = getGuid(); }, b, c, getGuid())));
-        (pipe2 (identifier) (symbol EQ >>. expression)
-            (fun a b -> Ast.VariableAssignmentExpression ({ Identifier = a; Guid = getGuid() }, b, getGuid()))) ;
-    ]
+    (pipe2 (identifier) (symbol EQ >>. expression)
+        (fun a b -> Ast.VariableAssignmentExpression ({ Identifier = a; Guid = getGuid() }, b, getGuid()))) ;
     
 let arguments : Parser<Ast.Arguments, unit> = sepBy_ws expression (symbol COMMA)
     
 let identifierExpression : Parser<Ast.Expression, unit> =
     choice_ws [
-        attempt (pipe2 (identifier) (symbol OPENSQUARE >>. expression .>> symbol CLOSESQUARE)
-            (fun a b -> Ast.ArrayIdentifierExpression ({ Identifier = a; Guid = getGuid(); }, b, getGuid())));
         attempt (pipe2 (identifier) (symbol OPENPAREN >>. arguments .>> symbol CLOSEPAREN)
             (fun a b -> Ast.FunctionCallExpression (a, b, getGuid()))) ;
         identifier |>> (fun x -> Ast.IdentifierExpression ({ Identifier = x; Guid = getGuid(); }, getGuid())) ;
-
     ]
-
-
 
 /// Operators    
 
@@ -107,10 +89,16 @@ let termParser =
         between (symbol OPENPAREN) (symbol CLOSEPAREN) termsExpression 
     ]
     
+let identifierFromExpression = function
+    | Ast.IdentifierExpression (i, _) -> {i with Guid = getGuid()}
+    | _ -> raise (CompilerErrors.syntaxError (sprintf "Identifier expected"))
+    
 opp.TermParser <- termParser
 
 opp.AddOperator(InfixOperator(OR, ws, 1, Associativity.Left, fun x y ->     (binary x Ast.Eq y (getGuid()))))
 opp.AddOperator(InfixOperator(IS, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Eq y (getGuid()))))
+
+opp.AddOperator(InfixOperator(TO, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.To y (getGuid()))))
 
 opp.AddOperator(InfixOperator(LTEQ, ws, 2, Associativity.Left, fun x y ->   (binary x Ast.LtEq y (getGuid()))))
 opp.AddOperator(InfixOperator(LT, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Lt y (getGuid()))))
@@ -130,13 +118,18 @@ opp.AddOperator(PrefixOperator(NOT, ws, 4, true, fun x -> (unary x Ast.Not (getG
 opp.AddOperator(PrefixOperator(MINUS, ws, 4, true, fun x -> (unary x Ast.Minus (getGuid()))))
 opp.AddOperator(PrefixOperator(PLUS, ws, 4, true, fun x -> (unary x Ast.Plus (getGuid()))))
 
+opp.AddOperator(PrefixOperator(PLUSPLUS, ws, 5, true, fun x -> (Ast.VariableAssignmentExpression((identifierFromExpression x), (binary (x) (Ast.Sum) (Ast.LiteralExpression(Ast.IntLiteral(1), getGuid())) (getGuid())), (getGuid())))))
+opp.AddOperator(PrefixOperator(MINUSMINUS, ws, 5, true, fun x -> (Ast.VariableAssignmentExpression((identifierFromExpression x), (binary (x) (Ast.Diff) (Ast.LiteralExpression(Ast.IntLiteral(1), getGuid())) (getGuid())), (getGuid())))))
+    
+opp.AddOperator(PostfixOperator(PLUSPLUS, ws, 5, true, fun x -> (Ast.VariableAssignmentExpression((identifierFromExpression x), (binary (x) (Ast.Sum) (Ast.LiteralExpression(Ast.IntLiteral(1), getGuid())) (getGuid())), (getGuid())))))
+opp.AddOperator(PostfixOperator(MINUSMINUS, ws, 5, true, fun x -> (Ast.VariableAssignmentExpression((identifierFromExpression x), (binary (x) (Ast.Diff) (Ast.LiteralExpression(Ast.IntLiteral(1), getGuid())) (getGuid())), (getGuid())))))
 
 do expressionImpl := 
     choice_ws [
         attempt assignmentExpression ;
         attempt termsExpression ;
         attempt literalExpression ;
-                identifierExpression ;
+        identifierExpression ;
     ]
     
     
@@ -177,12 +170,8 @@ let expressionStatement : Parser<Ast.Statement, unit> =
     
     
 let parameterStatement : Parser<Ast.VariableDeclarationStatement, unit> =
-    choice_ws [
-        attempt (pipe2 (identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
-            (fun a b -> (a, b, None, true, getGuid()))) ;
         (pipe2 (identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> (a, b, None, false, getGuid()))) ;
-    ]
+            (fun a b -> (a, b, None, getGuid()))) ;
 
 let parametersStatement : Parser<Ast.Parameters, unit> = sepBy_ws parameterStatement (symbol COMMA)
 
@@ -198,19 +187,20 @@ let functionDeclarationStatement : Parser<Ast.Statement, unit> =
 
 let variableDeclarationStatement : Parser<Ast.Statement, unit> = 
     choice_ws [
-        attempt (pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) (symbol EQ >>. expression)
-            (fun a b c -> Ast.VariableDeclarationStatement (a, b, Some c, true, getGuid()))) ;
         attempt (pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) (symbol EQ >>. expression)
-            (fun a b c -> Ast.VariableDeclarationStatement (a, b, Some c, false, getGuid()))) ;
-        attempt (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec .>> keyword ARRAY) 
-            (fun a b -> Ast.VariableDeclarationStatement (a, b, None, true, getGuid()))) ;
+            (fun a b c -> Ast.VariableDeclarationStatement (a, b, Some c, getGuid()))) ;
         (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> Ast.VariableDeclarationStatement (a, b, None, false, getGuid()))) ;
+            (fun a b -> Ast.VariableDeclarationStatement (a, b, None, getGuid()))) ;
     ]
     
+/// Comments
+
+let singleLineComment : Parser<Ast.Statement, unit> = 
+    (pchar COMMENT_START >>. restOfLine true) |>> (fun x -> Ast.CommentStatement x)
 
 do statementImpl := 
     choice_ws [
+        attempt singleLineComment ;
         attempt functionDeclarationStatement ;
         attempt variableDeclarationStatement ;
         attempt ifStatement ;
@@ -223,8 +213,13 @@ do statementImpl :=
 
 /// Declarations
 
-let declarationStatement = variableDeclarationStatement <|> functionDeclarationStatement
-
+let declarationStatement = 
+    choice_ws [
+        variableDeclarationStatement ;
+        functionDeclarationStatement ;
+        singleLineComment ;
+    ]
+    
 let declarationStatementList = many_ws declarationStatement
 
 let program = declarationStatementList .>> eof

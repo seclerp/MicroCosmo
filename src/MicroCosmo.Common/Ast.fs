@@ -4,11 +4,10 @@ open System
 type Program = Statement list
 
 // Guid is unique component
-and VariableDeclarationStatement = Identifier * TypeSpec * Expression option * bool * Guid
+and VariableDeclarationStatement = Identifier * TypeSpec * Expression option * Guid
 
 and TypeSpec =
     | NoneType
-    | Any
     | String
     | Int
     | Double
@@ -23,6 +22,7 @@ and Parameters = VariableDeclarationStatement list
 and IdentifierRef = { Identifier : string; Guid : Guid }
 
 and Statement = 
+    | CommentStatement of string
     | FunctionDeclarationStatement of FunctionDeclarationStatement
     | VariableDeclarationStatement of VariableDeclarationStatement
     | ExpressionStatement of Expression
@@ -38,15 +38,11 @@ and WhileStatement = Expression * Statement
 
 and Expression = 
     | VariableAssignmentExpression of IdentifierRef * Expression * Guid
-    | ArrayVariableAssignmentExpression of IdentifierRef * Expression * Expression * Guid
     | BinaryExpression of Expression * BinaryOperator * Expression * Guid
     | UnaryExpression of UnaryOperator * Expression * Guid
     | IdentifierExpression of IdentifierRef * Guid
-    | ArrayIdentifierExpression of IdentifierRef * Expression * Guid
     | FunctionCallExpression of Identifier * Arguments * Guid
-    | ArraySizeExpression of IdentifierRef * Guid
     | LiteralExpression of Literal * Guid
-    | ArrayAllocationExpression of TypeSpec * Expression * Guid
     | Empty
     
 and BinaryOperator =
@@ -70,6 +66,7 @@ and BinaryOperator =
     | LtEq
     | Or
     | And
+    | To
     
 and UnaryOperator =
     | Not 

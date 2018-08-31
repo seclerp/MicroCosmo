@@ -1,3 +1,5 @@
+# Sample program
+
 let a : int
 
 func fact(val : int) : int { 
@@ -8,19 +10,30 @@ func fact(val : int) : int {
     return (val * fact(val - 1))
 } 
 
-func main1() {
+func main() {
+    main1()
+}
+
+func main3() {
+    let a : int
+    a = 0
+    a = -+a++ + - ++a + +-+a
+    println(a to string)
+}
+
+func main2() {
     a = 1
     while (a < 6) {
-        printlni(fact(a))
-        a = a + 1
+        println(fact(a) to string)
+        a++
     }
 }
 
-func main() {
+func main1() {
     let hello : string
     hello = "Hello, "
     let name : string
     println("Enter name: ")
     name = readstr()
-    println(hello + name)
+    println(hello + name to string)
 }

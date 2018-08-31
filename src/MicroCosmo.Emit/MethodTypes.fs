@@ -82,12 +82,11 @@ type MethodGenerator(typeBuilder : TypeBuilder, ilMethod : ILMethod,
             
         ilMethod.Locals |> List.iter (emitLocal ilGenerator)
         ilMethod.Body |> List.iter (emitOpCode ilGenerator)
-        
         let rec last =
             function
             | head :: [] -> head
             | head :: tail -> last tail
-            | _ -> failwith "Empty list."
+            | x -> failwith "Empty list."
             
-        if (last ilMethod.Body) <> Ret then
+        if Seq.length ilMethod.Body = 0 || last ilMethod.Body <> Ret then
             ilGenerator.Emit(OpCodes.Ret)

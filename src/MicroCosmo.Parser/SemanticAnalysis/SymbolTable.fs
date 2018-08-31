@@ -18,8 +18,9 @@ type SymbolTable(program) as self =
 
     let rec scanDeclaration =
         function
-        | Ast.VariableDeclarationStatement(x) -> symbolScopeStack.AddDeclaration x
-        | Ast.FunctionDeclarationStatement(x) -> scanFunctionDeclaration x
+        | Ast.CommentStatement _ -> ()
+        | Ast.VariableDeclarationStatement x -> symbolScopeStack.AddDeclaration x
+        | Ast.FunctionDeclarationStatement x -> scanFunctionDeclaration x
         
     and scanFunctionDeclaration (_, parameters, functionReturnType, blockStatement, _) =
         let rec scanBlockStatement statements =
@@ -29,11 +30,11 @@ type SymbolTable(program) as self =
 
         and scanStatement =
             function
-            | Ast.VariableDeclarationStatement(i, t, e, a, g) -> 
+            | Ast.VariableDeclarationStatement(i, t, e, g) -> 
                 match e with
                 | Some e -> scanExpression e
                 | None -> ()
-                symbolScopeStack.AddDeclaration (i, t, e, a, g)
+                symbolScopeStack.AddDeclaration (i, t, e, g)
             | Ast.ExpressionStatement(es) ->
                 match es with
                 | Ast.Empty -> ()
@@ -59,6 +60,7 @@ type SymbolTable(program) as self =
             | Ast.BreakStatement ->
                 if whileStatementStack.Count = 0 then
                     raise (noEnclosingLoop()) 
+            | Ast.CommentStatement _ -> ()       
 
         and addIdentifierMapping identifierRef =
             let declaration = symbolScopeStack.CurrentScope.FindDeclaration identifierRef
@@ -69,10 +71,6 @@ type SymbolTable(program) as self =
             | Ast.VariableAssignmentExpression(i, e, _) ->
                 addIdentifierMapping i
                 scanExpression e
-            | Ast.ArrayVariableAssignmentExpression(i, e1, e2, _) ->
-                addIdentifierMapping i
-                scanExpression e1
-                scanExpression e2
             | Ast.BinaryExpression(e1, _, e2, _) ->
                 scanExpression e1
                 scanExpression e2
@@ -80,16 +78,9 @@ type SymbolTable(program) as self =
                 scanExpression e
             | Ast.IdentifierExpression(i, _) ->
                 addIdentifierMapping i
-            | Ast.ArrayIdentifierExpression(i, e, _) ->
-                addIdentifierMapping i
-                scanExpression e
             | Ast.FunctionCallExpression(_, args, _) ->
                 args |> List.iter scanExpression
-            | Ast.ArraySizeExpression(i, _) ->
-                addIdentifierMapping i
             | Ast.LiteralExpression(l, _) -> ()
-            | Ast.ArrayAllocationExpression(_, e, _) ->
-                scanExpression e 
             | Ast.Empty -> ()
 
         let toBlockStatement = function Ast.BlockStatement x -> x

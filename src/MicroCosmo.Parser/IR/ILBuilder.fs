@@ -17,6 +17,14 @@ type VariableMappingDictionary() =
 module private ILBuilderUtilities =
     open System
 
+    let stringToType =
+        function
+        | "none"   -> Ast.NoneType
+        | "bool"   -> Ast.Bool
+        | "int"    -> Ast.Int
+        | "double" -> Ast.Double
+        | "string" -> Ast.String
+
     let typeOf =
         function
         | Ast.NoneType  -> typeof<Void>
@@ -24,9 +32,8 @@ module private ILBuilderUtilities =
         | Ast.Int       -> typeof<int>
         | Ast.Double    -> typeof<float>
         | Ast.String    -> typeof<string>
-        | Ast.Any       -> typeof<Object>
 
-    let createILVariable (i, t, _, _, _) =
+    let createILVariable (i, t, _, _) =
         {
             ILVariable.Type = typeOf t; 
             Name = i;
@@ -80,7 +87,8 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
             let leftProcessed = processExpression l
             let rightProcessed = processExpression r
             
-            if op = Ast.Sum then
+            match op with
+            | Ast.Sum -> 
                 let leftType = semanticAnalysisResult.ExpressionTypes.[l].Type
                 let rightType = semanticAnalysisResult.ExpressionTypes.[r].Type
                 
@@ -91,11 +99,27 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
                 | _ -> List.concat [ leftProcessed;
                                      rightProcessed;
                                      [ processBinaryOperator op ] ]
-            else
+            | Ast.To -> processExplicitCastOperator l r
+                 
+            | _ -> 
                 List.concat [ leftProcessed;
                               rightProcessed;
                               [ processBinaryOperator op ] ]
-                              
+    
+    and processExplicitCastOperator exprFrom exprTo =
+        let toExprToType = function Ast.IdentifierExpression ({Identifier = i}, _) -> stringToType i
+        let toType = toExprToType exprTo
+        match toType with
+        | Ast.String -> 
+            List.concat [ processExpression exprFrom ;
+                          [ ILOpCode.CallClr((typeOf toType).GetMethod("ToString", Array.empty)) ]; ]
+        | Ast.Int ->
+            List.concat [ processExpression exprFrom ;
+                          [ ILOpCode.Conv_i4 ] ]
+        | Ast.Double ->
+            List.concat [ processExpression exprFrom ;
+                          [ ILOpCode.Conv_r8 ] ]
+    
     and processStringConcatOperator =
         ILOpCode.CallClr(typeof<System.String>.GetMethod("Concat", [| typeof<System.String>; typeof<System.String> |]))
 
@@ -131,38 +155,20 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
             List.concat [ processExpression e
                           [ ILOpCode.Dup ]
                           processIdentifierStore i ]
-        | Ast.ArrayVariableAssignmentExpression(i, e1, e2, _) as ae ->
-            List.concat [ processIdentifierLoad i
-                          processExpression e1
-                          processExpression e2
-                          [ ILOpCode.Dup ]
-                          [ ILOpCode.Stloc arrayAssignmentLocals.[ae] ]
-                          [ ILOpCode.Stelem (typeOf (semanticAnalysisResult.SymbolTable.GetIdentifierTypeSpec i).Type) ]
-                          [ ILOpCode.Ldloc arrayAssignmentLocals.[ae] ] ]
         | Ast.BinaryExpression(a, b, c, _) -> processBinaryExpression (a, b, c)
         | Ast.UnaryExpression(op, e, _) ->
             List.concat [ processExpression e
                           processUnaryOperator op]
         | Ast.IdentifierExpression(i, _) -> processIdentifierLoad i
-        | Ast.ArrayIdentifierExpression(i, e, _) ->
-            List.concat [ processIdentifierLoad i
-                          processExpression e
-                          [ ILOpCode.Ldelem (typeOf (semanticAnalysisResult.SymbolTable.GetIdentifierTypeSpec i).Type) ] ]
-        | Ast.FunctionCallExpression(i, a, _) ->
+         | Ast.FunctionCallExpression(i, a, _) ->
             List.concat [ a |> List.collect processExpression
                           [ ILOpCode.Call i ] ]
-        | Ast.ArraySizeExpression(i, _) ->
-            List.concat [ processIdentifierLoad i
-                          [ ILOpCode.Ldlen ] ]
         | Ast.LiteralExpression(l, _) ->
             match l with
             | Ast.IntLiteral(x)     -> [ ILOpCode.Ldc_I4 x ]
             | Ast.DoubleLiteral(x)  -> [ ILOpCode.Ldc_R8 x ]
             | Ast.BoolLiteral(x)    -> [ (if x then ILOpCode.Ldc_I4(1) else ILOpCode.Ldc_I4 0) ]
             | Ast.StringLiteral(x)  -> [ ILOpCode.Ldstr x ]
-        | Ast.ArrayAllocationExpression(t, e, _) ->
-            List.concat [ processExpression e
-                          [ ILOpCode.Newarr (typeOf t) ] ]
 
     and processUnaryOperator =
         function
@@ -268,20 +274,9 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
         and fromExpression =
             function
             | Ast.VariableAssignmentExpression(i, e, _) -> fromExpression e
-            | Ast.ArrayVariableAssignmentExpression(i, e1, e2, _) as ae ->
-                let v = {
-                    ILVariable.Type = typeOf ((semanticAnalysisResult.SymbolTable.GetIdentifierTypeSpec i).Type); 
-                    Name = "ArrayAssignmentTemp" + string localIndex;
-                }
-                arrayAssignmentLocals.Add(ae, localIndex);
-                localIndex <- localIndex + 1s
-                List.concat [ [ v ]; fromExpression e2 ]
-                
             | Ast.BinaryExpression(l, op, r, _)      -> List.concat [ fromExpression l; fromExpression r; ]
             | Ast.UnaryExpression(op, e, _)          -> fromExpression e
-            | Ast.ArrayIdentifierExpression(i, e, _) -> fromExpression e
             | Ast.FunctionCallExpression(i, a, _)    -> a |> List.collect fromExpression
-            | Ast.ArrayAllocationExpression(t, e, _) -> fromExpression e
             | _ -> []
 
         fromStatement statement
@@ -369,24 +364,7 @@ type ILBuilder(semanticAnalysisResult) =
                          CallClr(typeof<System.Console>.GetMethod("Write", [| typeof<System.Object> |]))
                          Ret ];
             };
-            {
-                Name = "printlni";
-                ReturnType = typeof<System.Void>;
-                Parameters = [ { Type = typeof<int>; Name = "value"; }];
-                Locals = [];
-                Body = [ Ldarg(0s)
-                         CallClr(typeof<System.Console>.GetMethod("WriteLine", [| typeof<int> |]))
-                         Ret ];
-            };
-            {
-                Name = "printi";
-                ReturnType = typeof<System.Void>;
-                Parameters = [ { Type = typeof<int>; Name = "value"; }];
-                Locals = [];
-                Body = [ Ldarg(0s)
-                         CallClr(typeof<System.Console>.GetMethod("Write", [| typeof<int> |]))
-                         Ret ];
-            };]
+        ]
 
         {
             Fields  = variableDeclarations |> List.map (fun x -> processStaticVariableDeclaration x);
