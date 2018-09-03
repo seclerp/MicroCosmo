@@ -10,21 +10,17 @@ func fact(val : int) : int {
     return (val * fact(val - 1))
 } 
 
-func main() {
-    main1()
-}
-
 func main3() {
     let a : int
     a = 0
     a = -+a++ + - ++a + +-+a
-    println(a to string)
+    println(itostr(a))
 }
 
 func main2() {
     a = 1
     while (a < 6) {
-        println(fact(a) to string)
+        println(itostr(fact(a)))
         a++
     }
 }
@@ -35,5 +31,9 @@ func main1() {
     let name : string
     println("Enter name: ")
     name = readstr()
-    println(hello + name to string)
+    println(hello + name)
+}
+
+func main() {
+    main1()
 }

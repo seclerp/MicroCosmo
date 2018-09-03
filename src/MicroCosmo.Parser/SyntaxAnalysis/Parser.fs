@@ -98,8 +98,6 @@ opp.TermParser <- termParser
 opp.AddOperator(InfixOperator(OR, ws, 1, Associativity.Left, fun x y ->     (binary x Ast.Eq y (getGuid()))))
 opp.AddOperator(InfixOperator(IS, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Eq y (getGuid()))))
 
-opp.AddOperator(InfixOperator(TO, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.To y (getGuid()))))
-
 opp.AddOperator(InfixOperator(LTEQ, ws, 2, Associativity.Left, fun x y ->   (binary x Ast.LtEq y (getGuid()))))
 opp.AddOperator(InfixOperator(LT, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Lt y (getGuid()))))
 

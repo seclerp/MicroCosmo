@@ -84,11 +84,6 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
                     simpleType Ast.Bool
                 | Ast.Sum | Ast.Diff | Ast.Mult | Ast.Div | Ast.Mod ->
                     typeOfE1
-                | Ast.To -> 
-                    checkCast typeOfE1 typeOfE2
-                    match e2 with
-                    | Ast.IdentifierExpression _ -> typeOfE2
-                    | _ -> raise (syntaxError "Identifier expected near 'to'")
                     
             | Ast.UnaryExpression(op, e1, _) -> // e.g. not true
                 let typeOfE = scanExpression e1

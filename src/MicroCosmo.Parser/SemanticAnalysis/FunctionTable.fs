@@ -23,5 +23,9 @@ type FunctionTable(program) as self =
         self.Add("readstr",     { ReturnType = Ast.String;      ParameterTypes = []; })
         self.Add("readint",     { ReturnType = Ast.Int;         ParameterTypes = []; })
         self.Add("readreal",    { ReturnType = Ast.Double;      ParameterTypes = []; })
+        self.Add("itostr",      { ReturnType = Ast.String;      ParameterTypes = [{ Type = Ast.Int }]; })
+        self.Add("dtostr",      { ReturnType = Ast.String;      ParameterTypes = [{ Type = Ast.Double }]; })
+        self.Add("itod",        { ReturnType = Ast.Int;         ParameterTypes = [{ Type = Ast.Double }]; })
+        self.Add("dtoi",        { ReturnType = Ast.Double;      ParameterTypes = [{ Type = Ast.Int }]; })
         
         program |> List.iter scanDeclaration 

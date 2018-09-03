@@ -99,26 +99,11 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
                 | _ -> List.concat [ leftProcessed;
                                      rightProcessed;
                                      [ processBinaryOperator op ] ]
-            | Ast.To -> processExplicitCastOperator l r
-                 
+                                     
             | _ -> 
                 List.concat [ leftProcessed;
                               rightProcessed;
                               [ processBinaryOperator op ] ]
-    
-    and processExplicitCastOperator exprFrom exprTo =
-        let toExprToType = function Ast.IdentifierExpression ({Identifier = i}, _) -> stringToType i
-        let toType = toExprToType exprTo
-        match toType with
-        | Ast.String -> 
-            List.concat [ processExpression exprFrom ;
-                          [ ILOpCode.CallClr((typeOf toType).GetMethod("ToString", Array.empty)) ]; ]
-        | Ast.Int ->
-            List.concat [ processExpression exprFrom ;
-                          [ ILOpCode.Conv_i4 ] ]
-        | Ast.Double ->
-            List.concat [ processExpression exprFrom ;
-                          [ ILOpCode.Conv_r8 ] ]
     
     and processStringConcatOperator =
         ILOpCode.CallClr(typeof<System.String>.GetMethod("Concat", [| typeof<System.String>; typeof<System.String> |]))
@@ -319,6 +304,15 @@ type ILBuilder(semanticAnalysisResult) =
             let ilMethodBuilder = new ILMethodBuilder(semanticAnalysisResult, variableMappings)
             ilMethodBuilder.BuildMethod functionDeclaration
 
+        let processCast toType =
+            match toType with
+            | Ast.String -> 
+                ILOpCode.CallClr((typeOf toType).GetMethod("ToString", Array.empty))
+            | Ast.Int ->
+                ILOpCode.Conv_i4
+            | Ast.Double ->
+                ILOpCode.Conv_r8
+
         let builtInMethods = [
             {
                 Name = "readstr";
@@ -364,6 +358,42 @@ type ILBuilder(semanticAnalysisResult) =
                          CallClr(typeof<System.Console>.GetMethod("Write", [| typeof<System.Object> |]))
                          Ret ];
             };
+            {
+                Name = "itostr";
+                ReturnType = typeof<System.String>;
+                Parameters = [ { Type = typeof<System.Int32>; Name = "value"; }];
+                Locals = [];
+                Body = [ Ldarg(0s)
+                         processCast Ast.String
+                         Ret ];
+            };
+            {
+                Name = "dtostr";
+                ReturnType = typeof<System.String>;
+                Parameters = [ { Type = typeof<System.Double>; Name = "value"; }];
+                Locals = [];
+                Body = [ Ldarg(0s)
+                         processCast Ast.String
+                         Ret ];
+            };
+            {
+                Name = "itod";
+                ReturnType = typeof<System.Double>;
+                Parameters = [ { Type = typeof<System.Int32>; Name = "value"; }];
+                Locals = [];
+                Body = [ Ldarg(0s)
+                         processCast Ast.Double
+                         Ret ];
+            };        
+            {
+                Name = "dtoi";
+                ReturnType = typeof<System.Int32>;
+                Parameters = [ { Type = typeof<System.Double>; Name = "value"; }];
+                Locals = [];
+                Body = [ Ldarg(0s)
+                         processCast Ast.Int
+                         Ret ];
+            };       
         ]
 
         {

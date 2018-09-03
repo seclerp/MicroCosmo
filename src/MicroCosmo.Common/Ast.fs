@@ -66,7 +66,6 @@ and BinaryOperator =
     | LtEq
     | Or
     | And
-    | To
     
 and UnaryOperator =
     | Not 
