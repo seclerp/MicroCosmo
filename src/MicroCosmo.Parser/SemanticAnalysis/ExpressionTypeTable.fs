@@ -13,12 +13,13 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
     
     let rec scanDeclaration =
         function
+        | Ast.CommentStatement _ -> ()
         | Ast.FunctionDeclarationStatement(x) -> scanFunctionDeclaration x
-        | Ast.VariableDeclarationStatement(_, t, e, a, _) -> 
+        | Ast.VariableDeclarationStatement(_, t, e, _) -> 
             match e with
             | Some ex -> 
                 let typeOfE = scanExpression ex
-                let typeOfI = { Type = t; IsArray = a; }
+                let typeOfI = { Type = t; }
                 checkCast typeOfE typeOfI
             | None -> ()
     
@@ -46,11 +47,11 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
             | Ast.ReturnStatement(Some(e)) ->
                 let typeOfE = scanExpression e
                 checkCast typeOfE (simpleType functionReturnType)
-            | Ast.VariableDeclarationStatement(_, t, e, a, _) -> 
+            | Ast.VariableDeclarationStatement(_, t, e, _) -> 
                 match e with
                 | Some ex -> 
                     let typeOfE = scanExpression ex
-                    let typeOfI = { Type = t; IsArray = a; }
+                    let typeOfI = { Type = t; }
                     checkCast typeOfE typeOfI
                 | None -> ()
             | _ -> () 
@@ -72,22 +73,6 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
                 checkCast typeOfE typeOfI
                 typeOfI
                
-            | Ast.ArrayVariableAssignmentExpression(i, e1, e2, _) -> // e.g. j[i] = 3
-                checkArrayIndexType e1
-                               
-                let typeOfE2 = scanExpression e2
-                let typeOfI = symbolTable.GetIdentifierTypeSpec i
-                
-                if not typeOfI.IsArray then
-                   raise (cannotApplyIndexing (typeOfI.ToString()))
-                
-                if typeOfE2.IsArray then
-                   raise (cannotConvertType (typeOfE2.ToString()) (typeOfI.Type.ToString()))
-
-                checkCast typeOfE2 typeOfI
-               
-                simpleType typeOfI.Type
-               
             | Ast.BinaryExpression(e1, op, e2, _) -> // e.g. 1 + 2
                 let typeOfE1 = scanExpression e1
                 let typeOfE2 = scanExpression e2
@@ -104,10 +89,10 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
                 let typeOfE = scanExpression e1
                 match op with
                 | Ast.Not -> 
-                    checkCast typeOfE { Type = Ast.Bool; IsArray = false; }
+                    checkCast typeOfE { Type = Ast.Bool; }
                     simpleType Ast.Bool
                 | Ast.Plus | Ast.Minus -> 
-                    checkCast typeOfE { Type = Ast.Int; IsArray = false; }
+                    checkCast typeOfE { Type = Ast.Int; }
                     simpleType Ast.Int
                     
             | Ast.FunctionCallExpression(i, a, _) -> // e.g. myFunc(1, "a")
@@ -121,9 +106,6 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
                 List.iteri2 (checkArgument i) argumentTypes parameterTypes
                 simpleType calledFunction.ReturnType
                
-            | Ast.ArraySizeExpression(i, _) -> // e.g. myArray.size
-                simpleType Ast.Int
-               
             | Ast.IdentifierExpression(i, _) -> // e.g. myArray.size
                 symbolTable.GetIdentifierTypeSpec i
                                
@@ -134,20 +116,15 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
                 | Ast.DoubleLiteral(f)  -> simpleType Ast.Double
                 | Ast.StringLiteral(f)  -> simpleType Ast.String
                
-            | Ast.ArrayAllocationExpression(t, e, _) -> // e.g. new float[2]
-                checkArrayIndexType e
-                { Type = t; IsArray = true }
-
-            | Ast.Empty -> simpleType Ast.Any
-            | e -> raise (new Exception(sprintf "%A" e))
+            | Ast.Empty -> simpleType Ast.NoneType
                
         self.Add(expression, expressionType)
         expressionType    
        
     and canConvertType fromType toType =
         match fromType, toType with
-        | { Type = _; IsArray = false; }, { Type = Ast.Any; IsArray = false; } -> true
-        | { Type = Ast.Int; IsArray = false; }, { Type = Ast.Double; IsArray = false; } -> true
+        | { Type = Ast.Int; }, { Type = Ast.Double; } -> true
+        | _, { Type = Ast.String; } -> true
         | f, t when f = t -> true
         | _ -> false
 

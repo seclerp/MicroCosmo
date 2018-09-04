@@ -67,6 +67,8 @@ type MethodGenerator(typeBuilder : TypeBuilder, ilMethod : ILMethod,
         | ILOpCode.Stloc(i)   -> ilGenerator.Emit(OpCodes.Stloc, i)
         | ILOpCode.Stsfld(v)  -> ilGenerator.Emit(OpCodes.Stsfld, fieldMappings.[v])
         | ILOpCode.Sub        -> ilGenerator.Emit(OpCodes.Sub)
+        | ILOpCode.Conv_i4    -> ilGenerator.Emit(OpCodes.Conv_I4)
+        | ILOpCode.Conv_r8    -> ilGenerator.Emit(OpCodes.Conv_R8)
         
     member x.Generate() =
         methodBuilder.SetReturnType ilMethod.ReturnType
@@ -82,12 +84,11 @@ type MethodGenerator(typeBuilder : TypeBuilder, ilMethod : ILMethod,
             
         ilMethod.Locals |> List.iter (emitLocal ilGenerator)
         ilMethod.Body |> List.iter (emitOpCode ilGenerator)
-        
         let rec last =
             function
             | head :: [] -> head
             | head :: tail -> last tail
-            | _ -> failwith "Empty list."
+            | x -> failwith "Empty list."
             
-        if (last ilMethod.Body) <> Ret then
+        if Seq.length ilMethod.Body = 0 || last ilMethod.Body <> Ret then
             ilGenerator.Emit(OpCodes.Ret)

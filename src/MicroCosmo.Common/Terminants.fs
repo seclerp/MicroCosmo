@@ -8,16 +8,16 @@ let ELSE            = "else"
 let WHILE           = "while"
 let RETURN          = "return"
 let BREAK           = "break"
-let LENGTH          = "length"
-let ARRAY           = "array"
 
 // Type names
 let NONE            = "none"
-let ANY             = "any"
 let STRING          = "string"
 let BOOL            = "bool"
 let INT             = "int"
 let DOUBLE          = "double"
+
+// Comments
+let COMMENT_START  = '#' 
 
 // Literals
 let STRING_LIT      = @"\""(([^\""]|\\\"")*[^\\])?\""|\'(([^\""]|\\\"")*[^\\])?\'"
@@ -45,6 +45,7 @@ let LTEQ            = "<="
 let LT              = "<"
 let GTEQ            = ">="
 let GT              = ">"
+let TO              = "to"
 
 // Common
 let IDENTIFIER      = "[a-zA-Z_\$][a-zA-Z_\$0-9]*"

@@ -46,5 +46,5 @@ let compileToFile fileName code =
             Path.GetDirectoryName(fileName)
         )
         
-    let (_, _) = compile assemblyBuilder code
+    compile assemblyBuilder code |> ignore
     assemblyBuilder.Save (Path.GetFileName fileName)

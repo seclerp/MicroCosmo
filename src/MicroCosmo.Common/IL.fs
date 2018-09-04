@@ -59,6 +59,8 @@ and ILOpCode =
     | Stloc of int16
     | Stsfld of ILVariable
     | Sub
+    | Conv_i4
+    | Conv_r8
 
     override x.ToString() =
         match x with
