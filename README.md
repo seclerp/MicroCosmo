@@ -30,6 +30,8 @@ MicroCosmo supports builtin types:
 - `int` - 32-bit integer type
 - `bool` - Boolean value
 - `double` - 64-bit double-precision floating point type
+- `any` - special type, can contain any other type
+- `[type] array` - array of some type
 
 ### Literals
 
