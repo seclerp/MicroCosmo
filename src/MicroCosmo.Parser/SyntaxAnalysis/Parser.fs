@@ -178,12 +178,8 @@ let functionDeclarationStatement : Parser<Ast.Statement, unit> =
     ]
 
 let variableDeclarationStatement : Parser<Ast.Statement, unit> = 
-    choice_ws [
-        attempt (pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) (symbol EQ >>. expression)
-            (fun a b c -> Ast.VariableDeclarationStatement (a, b, getGuid()))) ;
-        (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> Ast.VariableDeclarationStatement (a, b, getGuid()))) ;
-    ]
+    (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
+        (fun a b -> Ast.VariableDeclarationStatement (a, b, getGuid()))) ;
     
 /// Comments
 
