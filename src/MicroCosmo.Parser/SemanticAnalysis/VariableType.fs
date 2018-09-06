@@ -8,5 +8,5 @@ type VariableType =
     }
     override x.ToString() = x.Type.ToString()
 
-let typeOfDeclaration (_, t, _, _) = { Type = t; }
+let typeOfDeclaration (_, t, _) = { Type = t; }
 let simpleType t = { Type = t; }

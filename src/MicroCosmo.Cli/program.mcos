@@ -14,7 +14,7 @@ func main3() {
     let a : int
     a = 0
     a = -+a++ + - ++a + +-+a
-    let b : int = 5
+    let b : int
     println(itostr(b))
     println(itostr(a))
 }

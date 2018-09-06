@@ -13,15 +13,8 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
     
     let rec scanDeclaration =
         function
-        | Ast.CommentStatement _ -> ()
         | Ast.FunctionDeclarationStatement(x) -> scanFunctionDeclaration x
-        | Ast.VariableDeclarationStatement(_, t, e, _) -> 
-            match e with
-            | Some ex -> 
-                let typeOfE = scanExpression ex
-                let typeOfI = { Type = t; }
-                checkCast typeOfE typeOfI
-            | None -> ()
+        | _ -> ()
     
     and scanFunctionDeclaration (_, _, functionReturnType, blockStatement, _) =
         let rec scanBlockStatement statements =
@@ -47,13 +40,6 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
             | Ast.ReturnStatement(Some(e)) ->
                 let typeOfE = scanExpression e
                 checkCast typeOfE (simpleType functionReturnType)
-            | Ast.VariableDeclarationStatement(_, t, e, _) -> 
-                match e with
-                | Some ex -> 
-                    let typeOfE = scanExpression ex
-                    let typeOfI = { Type = t; }
-                    checkCast typeOfE typeOfI
-                | None -> ()
             | _ -> () 
                        
         let toBlockStatement = function Ast.BlockStatement x -> x

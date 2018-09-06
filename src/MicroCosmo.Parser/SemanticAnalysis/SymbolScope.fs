@@ -11,7 +11,7 @@ type SymbolScope(parent : SymbolScope option) =
     
     let identifierFromDeclaration =
         function
-        | (i, _, _, _) -> i
+        | (i, _, _) -> i
     
     let declaresIdentifier (identifierRef : Ast.IdentifierRef) declaration =
         (identifierFromDeclaration declaration) = identifierRef.Identifier

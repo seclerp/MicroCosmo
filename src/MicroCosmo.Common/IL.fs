@@ -79,6 +79,7 @@ and ILOpCode =
         | Div         -> "div"
         | Label(l)    -> sprintf "label %i" l
         | Ldarg(s)    -> sprintf "ldarg %i" s
+        | Ldstr(s)    -> sprintf "ldstr %s" s
         | Ldc_I4(i)   -> sprintf "ldc_i4 %i" i
         | Ldc_R8(f)   -> sprintf "ldc_r8 %f" f
         | Ldelem(t)   -> sprintf "ldelem %s" t.Name
@@ -96,3 +97,5 @@ and ILOpCode =
         | Stloc(s)    -> sprintf "stloc %i" s
         | Stsfld(v)   -> sprintf "stsfld %s" v.Name
         | Sub         -> "sub"
+        | Conv_i4     -> "convid"
+        | Conv_r8     -> "convr8"

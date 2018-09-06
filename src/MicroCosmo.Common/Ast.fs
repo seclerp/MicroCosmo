@@ -4,7 +4,7 @@ open System
 type Program = Statement list
 
 // Guid is unique component
-and VariableDeclarationStatement = Identifier * TypeSpec * Expression option * Guid
+and VariableDeclarationStatement = Identifier * TypeSpec * Guid
 
 and TypeSpec =
     | NoneType

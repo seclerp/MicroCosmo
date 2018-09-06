@@ -33,7 +33,7 @@ module private ILBuilderUtilities =
         | Ast.Double    -> typeof<float>
         | Ast.String    -> typeof<string>
 
-    let createILVariable (i, t, _, _) =
+    let createILVariable (i, t, _) =
         {
             ILVariable.Type = typeOf t; 
             Name = i;

@@ -29,8 +29,6 @@ let FALSE_LIT       = "false"
 // Operators
 let PLUS            = "+"
 let MINUS           = "-"
-let PLUSPLUS        = "++"
-let MINUSMINUS      = "--"
 let NOT             = "not"
 let ASTERISK        = "*"
 let DOUBLEASTERISK  = "**"
@@ -45,7 +43,6 @@ let LTEQ            = "<="
 let LT              = "<"
 let GTEQ            = ">="
 let GT              = ">"
-let TO              = "to"
 
 // Common
 let IDENTIFIER      = "[a-zA-Z_\$][a-zA-Z_\$0-9]*"

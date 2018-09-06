@@ -30,11 +30,8 @@ type SymbolTable(program) as self =
 
         and scanStatement =
             function
-            | Ast.VariableDeclarationStatement(i, t, e, g) -> 
-                match e with
-                | Some e -> scanExpression e
-                | None -> ()
-                symbolScopeStack.AddDeclaration (i, t, e, g)
+            | Ast.VariableDeclarationStatement(i, t, g) -> 
+                symbolScopeStack.AddDeclaration (i, t, g)
             | Ast.ExpressionStatement(es) ->
                 match es with
                 | Ast.Empty -> ()
