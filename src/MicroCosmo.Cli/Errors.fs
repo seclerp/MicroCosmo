@@ -1,5 +1,9 @@
-module MicroCosmo.CompilerErrors
+module Errors
 
+type CompilerException(message : string) as this =
+    inherit System.Exception(message)
+    override x.ToString() = this.GetType().Name + ": " + this.Message
+    
 let create m = CompilerException m
 let syntaxError a                 = create (sprintf "MC002 Syntax error: %s" a)
 let variableAlreadyDefined a      = create (sprintf "MC003 A variable named '%s' is already defined in this scope" a)

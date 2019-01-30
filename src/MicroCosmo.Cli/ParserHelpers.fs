@@ -1,7 +1,6 @@
-module MicroCosmo.SyntaxAnalysis.ParserHelpers
+module ParserHelpers
 
 open FParsec
-open MicroCosmo
 
 let ws = spaces
 let str = string

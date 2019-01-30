@@ -1,10 +1,10 @@
-﻿open MicroCosmo
-open System
+﻿open System
 open System.IO
-open MicroCosmo.SemanticAnalyzer
-open MicroCosmo.SyntaxAnalysis.Parser
-open MicroCosmo.IR.ILBuilder
-open MicroCosmo.Emit.Compiler
+
+open IL
+open Parser
+open Semantic
+open Compiler
 
 let InputFileKeys = ["-i"; "--input"]
 let OutputFilekeys = ["-o"; "--output"]

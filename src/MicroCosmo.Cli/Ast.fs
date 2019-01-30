@@ -1,4 +1,5 @@
-module MicroCosmo.Ast
+module Ast
+
 open System
 
 type Program = Statement list

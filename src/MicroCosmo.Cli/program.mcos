@@ -15,6 +15,7 @@ func main3() {
     a = 0
     a = -+a++ + - ++a + +-+a
     let b : int
+    b = 5
     println(itostr(b))
     println(itostr(a))
 }
@@ -23,7 +24,7 @@ func main2() {
     a = 1
     while (a < 6) {
         println(itostr(fact(a)))
-        a++
+        a = a + 1
     }
 }
 
