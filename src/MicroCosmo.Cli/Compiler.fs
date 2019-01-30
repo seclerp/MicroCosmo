@@ -1,10 +1,13 @@
-module MicroCosmo.Emit.MethodTypes
+module Compiler
 
+open System
+open System.IO
 open System.Collections.Generic
 open System.Reflection
 open System.Reflection.Emit
 
-open MicroCosmo.IL
+open IL
+open Semantic
 
 type MethodMappingDictionary = Dictionary<string, MethodInfo>
 type FieldMappingDictionary = Dictionary<ILVariable, FieldInfo>
@@ -79,7 +82,7 @@ type MethodGenerator(typeBuilder : TypeBuilder, ilMethod : ILMethod,
             
         ilMethod.Parameters |> List.iteri (fun i p -> defineParameter (i + 1) p.Name)
         
-        let emitLocal (ilGenerator : ILGenerator) variable =
+        let emitLocal (ilGenerator : ILGenerator) (variable : ILVariable)=
             ilGenerator.DeclareLocal(variable.Type).SetLocalSymInfo(variable.Name)
             
         ilMethod.Locals |> List.iter (emitLocal ilGenerator)
@@ -92,3 +95,64 @@ type MethodGenerator(typeBuilder : TypeBuilder, ilMethod : ILMethod,
             
         if Seq.length ilMethod.Body = 0 || last ilMethod.Body <> Ret then
             ilGenerator.Emit(OpCodes.Ret)
+
+type CodeGenerator(moduleBuilder : ModuleBuilder, ilClass : ILClass, moduleName : string) =
+    let fieldMappings = new FieldMappingDictionary()
+    
+    let generateField (typeBuilder : TypeBuilder) (ilField : ILVariable) =
+        let fieldAttributes = FieldAttributes.Public ||| FieldAttributes.Static
+        let fieldBuilder = typeBuilder.DefineField(ilField.Name, ilField.Type, fieldAttributes)
+        fieldMappings.Add(ilField, fieldBuilder)
+        
+    member x.GenerateType() =
+        let typeAttributes = TypeAttributes.Abstract ||| TypeAttributes.Sealed ||| TypeAttributes.Public
+        let typeBuilder = moduleBuilder.DefineType(moduleName + ".Program", typeAttributes)
+        
+        ilClass.Fields |> List.iter (generateField  typeBuilder)
+        
+        let methodMappings = new MethodMappingDictionary()
+        let generateMethod ilMethod =
+            let methodGenerator = new MethodGenerator(typeBuilder, ilMethod, methodMappings, fieldMappings)
+            methodGenerator.Generate()
+        ilClass.Methods |> List.iter generateMethod
+        
+        (typeBuilder.CreateType(), typeBuilder.GetMethod("main"))
+        
+let compile (assemblyBuilder : AssemblyBuilder) code =
+    let assemblyName = assemblyBuilder.GetName()
+    let moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName.Name, assemblyName.Name + ".exe", true)
+    
+    let program = Parser.parse code
+    match program with
+    | Error someError -> raise someError
+    | Ok someProgram -> 
+        let semanticAnalysisResult = analyze someProgram
+        match semanticAnalysisResult with
+        | Error someError -> raise someError
+        | Ok someSemanticAnalysisResult -> 
+            let ilBuilder = new ILBuilder(someSemanticAnalysisResult)
+            let ilClass = ilBuilder.BuildClass someProgram
+            let codeGenerator = new CodeGenerator(moduleBuilder, ilClass, assemblyName.Name)
+            let (compiledType, entryPoint) = codeGenerator.GenerateType()
+            assemblyBuilder.SetEntryPoint entryPoint
+            
+            (compiledType, entryPoint)
+            
+let compileToMemory assemblyName code =
+    let assemblyBuilder =
+        AppDomain.CurrentDomain.DefineDynamicAssembly(
+            assemblyName, AssemblyBuilderAccess.RunAndSave
+        )
+        
+    compile assemblyBuilder code
+    
+let compileToFile fileName code =
+    let assemblyName = new AssemblyName (Path.GetFileNameWithoutExtension fileName)
+    let assemblyBuilder =
+        AppDomain.CurrentDomain.DefineDynamicAssembly(
+            assemblyName, AssemblyBuilderAccess.RunAndSave,
+            Path.GetDirectoryName(fileName)
+        )
+        
+    compile assemblyBuilder code |> ignore
+    assemblyBuilder.Save (Path.GetFileName fileName)

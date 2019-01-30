@@ -1,14 +1,68 @@
-module MicroCosmo.SyntaxAnalysis.Parser
+module Parser
 
 open FParsec
-open MicroCosmo.Ast
-open MicroCosmo.Terminants
-open MicroCosmo.SyntaxAnalysis.ParserHelpers
-
 open System
-open MicroCosmo
+
+open ParserHelpers
+open Errors
 
 let getGuid = Guid.NewGuid
+
+// Keywords
+let private LET             = "let"
+let private FUNC            = "func"
+let private IF              = "if"
+let private ELSE            = "else"
+let private WHILE           = "while"
+let private RETURN          = "return"
+let private BREAK           = "break"
+
+// Type names
+let private NONE            = "none"
+let private STRING          = "string"
+let private BOOL            = "bool"
+let private INT             = "int"
+let private DOUBLE          = "double"
+
+// Comments
+let private COMMENT_START  = '#' 
+
+// Literals
+let private STRING_LIT      = @"\""(([^\""]|\\\"")*[^\\])?\""|\'(([^\""]|\\\"")*[^\\])?\'"
+let private INT_LIT         = @"\d+"
+let private DOUBLE_LIT      = @"\d*\.\d+" 
+let private TRUE_LIT        = "true" 
+let private FALSE_LIT       = "false" 
+
+// Operators
+let private PLUS            = "+"
+let private MINUS           = "-"
+let private NOT             = "not"
+let private ASTERISK        = "*"
+let private DOUBLEASTERISK  = "**"
+let private PERCENT         = "%"
+let private FORWARDSLASH    = "/"
+let private SINGLEEQUALS    = "="
+let private OR              = "or"
+let private AND             = "and"
+let private IS              = "is"
+let private EQ              = "="
+let private LTEQ            = "<="
+let private LT              = "<"
+let private GTEQ            = ">="
+let private GT              = ">"
+    
+// Common
+let private IDENTIFIER      = "[a-zA-Z_\$][a-zA-Z_\$0-9]*"
+let private DOT             = "."
+let private OPENPAREN       = "("
+let private CLOSEPAREN      = ")"
+let private OPENCURLY       = "{"
+let private CLOSECURLY      = "}"
+let private OPENSQUARE      = "["
+let private CLOSESQUARE     = "]"
+let private COLON           = ":"
+let private COMMA           = ","
 
 let typeSpec : Parser<Ast.TypeSpec, unit> = 
     choice_ws [
@@ -91,36 +145,30 @@ let termParser =
     
 let identifierFromExpression = function
     | Ast.IdentifierExpression (i, _) -> {i with Guid = getGuid()}
-    | _ -> raise (CompilerErrors.syntaxError (sprintf "Identifier expected"))
+    | _ -> raise (syntaxError (sprintf "Identifier expected"))
     
 opp.TermParser <- termParser
 
-opp.AddOperator(InfixOperator(OR, ws, 1, Associativity.Left, fun x y ->     (binary x Ast.Eq y (getGuid()))))
-opp.AddOperator(InfixOperator(IS, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Eq y (getGuid()))))
+opp.AddOperator(InfixOperator(OR, ws, 1, Associativity.Left, fun x y ->     binary x Ast.Eq y (getGuid())))
+opp.AddOperator(InfixOperator(IS, ws, 2, Associativity.Left, fun x y ->     binary x Ast.Eq y (getGuid())))
 
-opp.AddOperator(InfixOperator(LTEQ, ws, 2, Associativity.Left, fun x y ->   (binary x Ast.LtEq y (getGuid()))))
-opp.AddOperator(InfixOperator(LT, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Lt y (getGuid()))))
+opp.AddOperator(InfixOperator(LTEQ, ws, 2, Associativity.Left, fun x y ->   binary x Ast.LtEq y (getGuid())))
+opp.AddOperator(InfixOperator(LT, ws, 2, Associativity.Left, fun x y ->     binary x Ast.Lt y (getGuid())))
 
-opp.AddOperator(InfixOperator(GTEQ, ws, 2, Associativity.Left, fun x y ->   (binary x Ast.GtEq y (getGuid()))))
-opp.AddOperator(InfixOperator(GT, ws, 2, Associativity.Left, fun x y ->     (binary x Ast.Gt y (getGuid()))))
+opp.AddOperator(InfixOperator(GTEQ, ws, 2, Associativity.Left, fun x y ->   binary x Ast.GtEq y (getGuid())))
+opp.AddOperator(InfixOperator(GT, ws, 2, Associativity.Left, fun x y ->     binary x Ast.Gt y (getGuid())))
 
-opp.AddOperator(InfixOperator(AND, ws, 3, Associativity.Left, fun x y ->    (binary x Ast.And y (getGuid()))))
+opp.AddOperator(InfixOperator(AND, ws, 3, Associativity.Left, fun x y ->    binary x Ast.And y (getGuid())))
 
-opp.AddOperator(InfixOperator(PLUS, ws, 1, Associativity.Left, fun x y ->            (binary x Ast.Sum y (getGuid()))))
-opp.AddOperator(InfixOperator(MINUS, ws, 1, Associativity.Left, fun x y ->           (binary x Ast.Diff y (getGuid()))))
-opp.AddOperator(InfixOperator(ASTERISK, ws, 2, Associativity.Left, fun x y ->        (binary x Ast.Mult y (getGuid()))))
-opp.AddOperator(InfixOperator(FORWARDSLASH, ws, 2, Associativity.Left, fun x y ->    (binary x Ast.Div y (getGuid()))))
-opp.AddOperator(InfixOperator(DOUBLEASTERISK, ws, 3, Associativity.Right, fun x y -> (binary x Ast.Pow y (getGuid()))))
+opp.AddOperator(InfixOperator(PLUS, ws, 1, Associativity.Left, fun x y ->            binary x Ast.Sum y (getGuid())))
+opp.AddOperator(InfixOperator(MINUS, ws, 1, Associativity.Left, fun x y ->           binary x Ast.Diff y (getGuid())))
+opp.AddOperator(InfixOperator(ASTERISK, ws, 2, Associativity.Left, fun x y ->        binary x Ast.Mult y (getGuid())))
+opp.AddOperator(InfixOperator(FORWARDSLASH, ws, 2, Associativity.Left, fun x y ->    binary x Ast.Div y (getGuid())))
+opp.AddOperator(InfixOperator(DOUBLEASTERISK, ws, 3, Associativity.Right, fun x y -> binary x Ast.Pow y (getGuid())))
 
 opp.AddOperator(PrefixOperator(NOT, ws, 4, true, fun x -> (unary x Ast.Not (getGuid()))))
 opp.AddOperator(PrefixOperator(MINUS, ws, 4, true, fun x -> (unary x Ast.Minus (getGuid()))))
 opp.AddOperator(PrefixOperator(PLUS, ws, 4, true, fun x -> (unary x Ast.Plus (getGuid()))))
-
-opp.AddOperator(PrefixOperator(PLUSPLUS, ws, 5, true, fun x -> (Ast.VariableAssignmentExpression((identifierFromExpression x), (binary (x) (Ast.Sum) (Ast.LiteralExpression(Ast.IntLiteral(1), getGuid())) (getGuid())), (getGuid())))))
-opp.AddOperator(PrefixOperator(MINUSMINUS, ws, 5, true, fun x -> (Ast.VariableAssignmentExpression((identifierFromExpression x), (binary (x) (Ast.Diff) (Ast.LiteralExpression(Ast.IntLiteral(1), getGuid())) (getGuid())), (getGuid())))))
-    
-opp.AddOperator(PostfixOperator(PLUSPLUS, ws, 5, true, fun x -> (Ast.VariableAssignmentExpression((identifierFromExpression x), (binary (x) (Ast.Sum) (Ast.LiteralExpression(Ast.IntLiteral(1), getGuid())) (getGuid())), (getGuid())))))
-opp.AddOperator(PostfixOperator(MINUSMINUS, ws, 5, true, fun x -> (Ast.VariableAssignmentExpression((identifierFromExpression x), (binary (x) (Ast.Diff) (Ast.LiteralExpression(Ast.IntLiteral(1), getGuid())) (getGuid())), (getGuid())))))
 
 do expressionImpl := 
     choice_ws [
@@ -169,7 +217,7 @@ let expressionStatement : Parser<Ast.Statement, unit> =
     
 let parameterStatement : Parser<Ast.VariableDeclarationStatement, unit> =
         (pipe2 (identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> (a, b, None, getGuid()))) ;
+            (fun a b -> (a, b, getGuid()))) ;
 
 let parametersStatement : Parser<Ast.Parameters, unit> = sepBy_ws parameterStatement (symbol COMMA)
 
@@ -184,12 +232,8 @@ let functionDeclarationStatement : Parser<Ast.Statement, unit> =
     ]
 
 let variableDeclarationStatement : Parser<Ast.Statement, unit> = 
-    choice_ws [
-        attempt (pipe3 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) (symbol EQ >>. expression)
-            (fun a b c -> Ast.VariableDeclarationStatement (a, b, Some c, getGuid()))) ;
-        (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
-            (fun a b -> Ast.VariableDeclarationStatement (a, b, None, getGuid()))) ;
-    ]
+    (pipe2 (keyword LET >>. identifier) (symbol COLON >>. typeSpec) 
+        (fun a b -> Ast.VariableDeclarationStatement (a, b, getGuid()))) ;
     
 /// Comments
 
@@ -225,4 +269,4 @@ let program = declarationStatementList .>> eof
 let parse (input : string) =
     match run program input with
     | Success(result, _, _)   -> Result.Ok result
-    | Failure(errorMsg, _, _) -> Result.Error (CompilerErrors.syntaxError errorMsg)
+    | Failure(errorMsg, _, _) -> Result.Error (syntaxError errorMsg)
