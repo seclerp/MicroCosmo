@@ -1,4 +1,7 @@
-# :sparkles: MicroCosmo
+<h1 align="center">
+:sparkles: MicroCosmo
+</h1>
+
 <p align="center">
 MicroCosmo is tiny language made for educational purposes. It compiles into CIL and can run under CLR platform.
 </p>
