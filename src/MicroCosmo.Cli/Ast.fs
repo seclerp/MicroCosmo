@@ -1,4 +1,4 @@
-module Ast
+module MicroCosmo.Ast
 
 open System
 
@@ -13,16 +13,16 @@ and TypeSpec =
     | Int
     | Double
     | Bool
-    
+
 and FunctionDeclarationStatement = Identifier * Parameters * TypeSpec * Statement * Guid
-    
+
 and Identifier = string
 and Parameters = VariableDeclarationStatement list
 
 // Guid is unique component
 and IdentifierRef = { Identifier : string; Guid : Guid }
 
-and Statement = 
+and Statement =
     | CommentStatement of string
     | FunctionDeclarationStatement of FunctionDeclarationStatement
     | VariableDeclarationStatement of VariableDeclarationStatement
@@ -32,12 +32,12 @@ and Statement =
     | WhileStatement of WhileStatement
     | ReturnStatement of Expression option
     | BreakStatement
-    
+
 and BlockStatement = Statement list
 and IfStatement = Expression * Statement * Statement option
 and WhileStatement = Expression * Statement
 
-and Expression = 
+and Expression =
     | VariableAssignmentExpression of IdentifierRef * Expression * Guid
     | BinaryExpression of Expression * BinaryOperator * Expression * Guid
     | UnaryExpression of UnaryOperator * Expression * Guid
@@ -45,11 +45,11 @@ and Expression =
     | FunctionCallExpression of Identifier * Arguments * Guid
     | LiteralExpression of Literal * Guid
     | Empty
-    
+
 and BinaryOperator =
     | Eq
     | NotEq
-    | Sum 
+    | Sum
     | Diff
     | Mult
     | Div
@@ -67,9 +67,9 @@ and BinaryOperator =
     | LtEq
     | Or
     | And
-    
+
 and UnaryOperator =
-    | Not 
+    | Not
     | Plus
     | Minus
     | PostPlusPLus

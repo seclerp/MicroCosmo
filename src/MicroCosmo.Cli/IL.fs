@@ -1,12 +1,12 @@
-module IL
+module MicroCosmo.IL
 
 open System.Collections.Generic
-
 open System
 open System.Reflection
-open Semantic
 
-type ILClass = 
+open MicroCosmo.Semantic
+
+type ILClass =
     {
         Fields  : ILVariable list;
         Methods : ILMethod list;
@@ -110,7 +110,7 @@ type ILVariableScope =
     | ArgumentScope of int16
     | LocalScope of int16
 
-type VariableMappingDictionary() = 
+type VariableMappingDictionary() =
     inherit Dictionary<Ast.VariableDeclarationStatement, ILVariableScope>()
 
 module private ILBuilderUtilities =
@@ -123,6 +123,7 @@ module private ILBuilderUtilities =
         | "int"    -> Ast.Int
         | "double" -> Ast.Double
         | "string" -> Ast.String
+        | other -> raise (Exception <| sprintf "Unknown type %s" other)
 
     let typeOf =
         function
@@ -134,7 +135,7 @@ module private ILBuilderUtilities =
 
     let createILVariable (i, t, _) =
         {
-            ILVariable.Type = typeOf t; 
+            ILVariable.Type = typeOf t;
             Name = i;
         }
 
@@ -181,15 +182,15 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
                           [ ILOpCode.Label leftIsTrueLabel ]
                           processExpression r
                           [ ILOpCode.Label endLabel ] ]
-        | (l, op, r) -> 
+        | (l, op, r) ->
             let leftProcessed = processExpression l
             let rightProcessed = processExpression r
-            
+
             match op with
-            | Ast.Sum -> 
+            | Ast.Sum ->
                 let leftType = semanticAnalysisResult.ExpressionTypes.[l].Type
                 let rightType = semanticAnalysisResult.ExpressionTypes.[r].Type
-                
+
                 match (leftType, rightType) with
                 | (Ast.String, Ast.String) -> List.concat [ leftProcessed;
                                                             rightProcessed;
@@ -197,14 +198,16 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
                 | _ -> List.concat [ leftProcessed;
                                      rightProcessed;
                                      [ processBinaryOperator op ] ]
-                                     
-            | _ -> 
+
+            | _ ->
                 List.concat [ leftProcessed;
                               rightProcessed;
                               [ processBinaryOperator op ] ]
-    
+
     and processStringConcatOperator =
-        ILOpCode.CallClr(typeof<System.String>.GetMethod("Concat", [| typeof<System.String>; typeof<System.String> |]))
+        let a = typeof<System.String>.GetMethod("Concat", [| typeof<System.String>; typeof<System.String> |])
+        printf "%A" a
+        ILOpCode.CallClr(a)
 
     and processBinaryOperator =
         function
@@ -243,7 +246,7 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
             List.concat [ processExpression e
                           processUnaryOperator op]
         | Ast.IdentifierExpression(i, _) -> processIdentifierLoad i
-         | Ast.FunctionCallExpression(i, a, _) ->
+        | Ast.FunctionCallExpression(i, a, _) ->
             List.concat [ a |> List.collect processExpression
                           [ ILOpCode.Call i ] ]
         | Ast.LiteralExpression(l, _) ->
@@ -252,12 +255,14 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
             | Ast.DoubleLiteral(x)  -> [ ILOpCode.Ldc_R8 x ]
             | Ast.BoolLiteral(x)    -> [ (if x then ILOpCode.Ldc_I4(1) else ILOpCode.Ldc_I4 0) ]
             | Ast.StringLiteral(x)  -> [ ILOpCode.Ldstr x ]
+        | other -> sprintf "Unknown expression %A" other |> Exception |> raise
 
     and processUnaryOperator =
         function
         | Ast.Not   -> [ ILOpCode.Ldc_I4 0; ILOpCode.Ceq ]
         | Ast.Minus -> [ ILOpCode.Neg ]
         | Ast.Plus  -> [ ]
+        | other -> sprintf "Unknown unary operator %A" other |> Exception |> raise
 
     and processStatement =
         function
@@ -268,7 +273,7 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
                 let isNotVoid = semanticAnalysisResult.ExpressionTypes.[x].Type <> Ast.NoneType
                 List.concat [ processExpression x
                               (if isNotVoid then [ ILOpCode.Pop ] else []) ]
-                
+
         | Ast.BlockStatement(s) -> s |> List.collect processStatement
         | Ast.IfStatement(e, s1, Some(s2)) ->
             let thenLabel = makeLabel()
@@ -318,7 +323,7 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
 
     let processLocalDeclaration (declaration : Ast.VariableDeclarationStatement) =
         processVariableDeclaration &localIndex (fun i -> LocalScope i) declaration
-        
+
     let processParameter (declaration : Ast.VariableDeclarationStatement) =
         processVariableDeclaration &argumentIndex (fun i -> ArgumentScope i) declaration
 
@@ -329,29 +334,29 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
                 match es with
                 | Ast.Empty -> []
                 | e -> fromExpression e
-                
+
             | Ast.BlockStatement(statements) ->
                 List.concat [ statements |> List.collect collectLocalDeclarations ]
-                
+
             | Ast.IfStatement(e, s1, Some(s2)) ->
                 List.concat [ fromExpression e
                               collectLocalDeclarations s1
                               collectLocalDeclarations s2 ]
-                              
+
             | Ast.IfStatement(e, s1, None) ->
                 List.concat [ fromExpression e
                               collectLocalDeclarations s1 ]
-                              
+
             | Ast.WhileStatement(e, s) ->
                 List.concat [ fromExpression e
                               collectLocalDeclarations s ]
-                              
+
             | Ast.ReturnStatement(Some(e)) ->
                 List.concat [ fromExpression e ]
-                
-            | Ast.VariableDeclarationStatement decl -> 
+
+            | Ast.VariableDeclarationStatement decl ->
                 [ processLocalDeclaration decl ]
-                
+
             | _ -> []
 
         and fromExpression =
@@ -366,7 +371,7 @@ type ILMethodBuilder(semanticAnalysisResult : SemanticAnalysisResult,
 
     member x.BuildMethod(name, parameters, returnType, blockStatement : Ast.Statement, _) =
         let statements = match blockStatement with Ast.BlockStatement stmnts -> stmnts
-    
+
         {
             Name       = name;
             ReturnType = typeOf returnType;
@@ -390,7 +395,7 @@ type ILBuilder(semanticAnalysisResult) =
                 match x with
                 | Ast.VariableDeclarationStatement x -> Some x
                 | _ -> None)
-    
+
         let functionDeclarations =
             program
             |> List.choose (fun x ->
@@ -404,7 +409,7 @@ type ILBuilder(semanticAnalysisResult) =
 
         let processCast toType =
             match toType with
-            | Ast.String -> 
+            | Ast.String ->
                 ILOpCode.CallClr((typeOf toType).GetMethod("ToString", Array.empty))
             | Ast.Int ->
                 ILOpCode.Conv_i4
@@ -482,7 +487,7 @@ type ILBuilder(semanticAnalysisResult) =
                 Body = [ Ldarg(0s)
                          processCast Ast.Double
                          Ret ];
-            };        
+            };
             {
                 Name = "dtoi";
                 ReturnType = typeof<System.Int32>;
@@ -491,7 +496,7 @@ type ILBuilder(semanticAnalysisResult) =
                 Body = [ Ldarg(0s)
                          processCast Ast.Int
                          Ret ];
-            };       
+            };
         ]
 
         {

@@ -1,4 +1,4 @@
-module Semantic
+module MicroCosmo.Semantic
 
 open System.Collections.Generic
 
@@ -6,19 +6,19 @@ open Errors
 
 type SymbolScope(parent : SymbolScope option) =
     let mutable list = List.empty<Ast.VariableDeclarationStatement>
-    
+
     let identifierFromDeclaration =
         function
         | (i, _, _) -> i
-    
+
     let declaresIdentifier (identifierRef : Ast.IdentifierRef) declaration =
         (identifierFromDeclaration declaration) = identifierRef.Identifier
-    
+
     member x.AddDeclaration (declaration : Ast.VariableDeclarationStatement)=
         if List.exists (fun x -> identifierFromDeclaration x = identifierFromDeclaration declaration) list then
             raise (variableAlreadyDefined (identifierFromDeclaration declaration))
         list <- declaration :: list
-    
+
     member x.FindDeclaration identifierRef =
         let found = List.tryFind (fun x -> declaresIdentifier identifierRef x) list
         match found with
@@ -26,17 +26,17 @@ type SymbolScope(parent : SymbolScope option) =
         | None ->
             match parent with
             | Some(ss) -> ss.FindDeclaration identifierRef
-            | None -> raise (nameDoesNotExist (identifierRef.Identifier)) 
+            | None -> raise (nameDoesNotExist (identifierRef.Identifier))
 
 type SymbolScopeStack() =
     let stack = new Stack<SymbolScope>()
     do stack.Push(new SymbolScope(None))
-    
+
     member x.CurrentScope = stack.Peek()
-    
+
     member x.Push() = stack.Push(new SymbolScope(Some(stack.Peek())))
     member x.Pop() = stack.Pop() |> ignore
-    member x.AddDeclaration declaration = 
+    member x.AddDeclaration declaration =
         stack.Peek().AddDeclaration declaration
 
 type VariableType =
@@ -50,27 +50,28 @@ let simpleType t = { Type = t; }
 
 type SymbolTable(program) as self =
     inherit Dictionary<Ast.IdentifierRef, Ast.VariableDeclarationStatement>()
-    
+
 //    let sameIdentifierMap = Dictionary<string, string>()
 //    let sameIdentifierCounters = Dictionary<string, int>()
     let whileStatementStack = Stack<Ast.WhileStatement>()
-    let symbolScopeStack = new SymbolScopeStack() 
+    let symbolScopeStack = new SymbolScopeStack()
 
-    let rec scanDeclaration =
-        function
+    let rec scanDeclaration statement =
+        match statement with
         | Ast.CommentStatement _ -> ()
         | Ast.VariableDeclarationStatement x -> symbolScopeStack.AddDeclaration x
         | Ast.FunctionDeclarationStatement x -> scanFunctionDeclaration x
-        
+        | other -> ()
+
     and scanFunctionDeclaration (_, parameters, functionReturnType, blockStatement, _) =
         let rec scanBlockStatement statements =
             symbolScopeStack.Push()
             statements |> List.iter scanStatement
-            symbolScopeStack.Pop() |> ignore 
+            symbolScopeStack.Pop() |> ignore
 
         and scanStatement =
             function
-            | Ast.VariableDeclarationStatement(i, t, g) -> 
+            | Ast.VariableDeclarationStatement(i, t, g) ->
                 symbolScopeStack.AddDeclaration (i, t, g)
             | Ast.ExpressionStatement(es) ->
                 match es with
@@ -96,13 +97,14 @@ type SymbolTable(program) as self =
                     raise (cannotConvertType (Ast.NoneType.ToString()) (functionReturnType.ToString()))
             | Ast.BreakStatement ->
                 if whileStatementStack.Count = 0 then
-                    raise (noEnclosingLoop()) 
-            | Ast.CommentStatement _ -> ()       
+                    raise (noEnclosingLoop())
+            | Ast.CommentStatement _ -> ()
+            | other -> ()
 
         and addIdentifierMapping identifierRef =
             let declaration = symbolScopeStack.CurrentScope.FindDeclaration identifierRef
-            self.Add(identifierRef, declaration) 
-            
+            self.Add(identifierRef, declaration)
+
         and scanExpression (e : Ast.Expression) =
             match e with
             | Ast.VariableAssignmentExpression(i, e, _) ->
@@ -125,10 +127,10 @@ type SymbolTable(program) as self =
         symbolScopeStack.Push()
         parameters |> List.iter symbolScopeStack.AddDeclaration
         scanBlockStatement (toBlockStatement blockStatement)
-        symbolScopeStack.Pop() |> ignore 
-        
+        symbolScopeStack.Pop() |> ignore
+
     do program |> List.iter scanDeclaration
-        
+
     member x.GetIdentifierTypeSpec identifierRef =
         typeOfDeclaration self.[identifierRef]
 
@@ -140,7 +142,7 @@ type FunctionTableEntry =
 
 type FunctionTable(program) as self =
     inherit Dictionary<Ast.Identifier, FunctionTableEntry>()
-    
+
     let rec scanDeclaration =
         function
         | Ast.FunctionDeclarationStatement(i, p, t, _, _) ->
@@ -159,21 +161,22 @@ type FunctionTable(program) as self =
         self.Add("dtostr",      { ReturnType = Ast.String;      ParameterTypes = [{ Type = Ast.Double }]; })
         self.Add("itod",        { ReturnType = Ast.Int;         ParameterTypes = [{ Type = Ast.Double }]; })
         self.Add("dtoi",        { ReturnType = Ast.Double;      ParameterTypes = [{ Type = Ast.Int }]; })
-        
+
         program |> List.iter scanDeclaration
 
 type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : SymbolTable) as self =
     inherit Dictionary<Ast.Expression, VariableType>()
-    
+
     let rec scanDeclaration =
         function
         | Ast.CommentStatement _ -> ()
         | Ast.FunctionDeclarationStatement(x) -> scanFunctionDeclaration x
-    
+        | other -> ()
+
     and scanFunctionDeclaration (_, _, functionReturnType, blockStatement, _) =
         let rec scanBlockStatement statements =
-            statements |> List.iter scanStatement 
-            
+            statements |> List.iter scanStatement
+
         and scanStatement =
             function
             | Ast.ExpressionStatement(es) ->
@@ -194,17 +197,17 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
             | Ast.ReturnStatement(Some(e)) ->
                 let typeOfE = scanExpression e
                 checkCast typeOfE (simpleType functionReturnType)
-            | _ -> () 
-                       
+            | _ -> ()
+
         let toBlockStatement = function Ast.BlockStatement x -> x
         scanBlockStatement (toBlockStatement blockStatement)
-        
+
     and scanExpression expression =
         let checkArrayIndexType e =
             let arrayIndexType = scanExpression e
             if arrayIndexType <> simpleType Ast.Int then
                 raise (cannotConvertType (arrayIndexType.ToString()) (Ast.Int.ToString()))
-       
+
         let expressionType =
             match expression with
             | Ast.VariableAssignmentExpression(i, e, _) -> // e.g. i = 1
@@ -212,7 +215,7 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
                 let typeOfI = symbolTable.GetIdentifierTypeSpec i
                 checkCast typeOfE typeOfI
                 typeOfI
-               
+
             | Ast.BinaryExpression(e1, op, e2, _) -> // e.g. 1 + 2
                 let typeOfE1 = scanExpression e1
                 let typeOfE2 = scanExpression e2
@@ -224,17 +227,17 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
                     simpleType Ast.Bool
                 | Ast.Sum | Ast.Diff | Ast.Mult | Ast.Div | Ast.Mod ->
                     typeOfE1
-                    
+
             | Ast.UnaryExpression(op, e1, _) -> // e.g. not true
                 let typeOfE = scanExpression e1
                 match op with
-                | Ast.Not -> 
+                | Ast.Not ->
                     checkCast typeOfE { Type = Ast.Bool; }
                     simpleType Ast.Bool
-                | Ast.Plus | Ast.Minus -> 
+                | Ast.Plus | Ast.Minus ->
                     checkCast typeOfE { Type = Ast.Int; }
                     simpleType Ast.Int
-                    
+
             | Ast.FunctionCallExpression(i, a, _) -> // e.g. myFunc(1, "a")
                 if not (functionTable.ContainsKey i) then
                     raise (nameDoesNotExist i)
@@ -245,22 +248,22 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
                 let argumentTypes = a |> List.map scanExpression
                 List.iteri2 (checkArgument i) argumentTypes parameterTypes
                 simpleType calledFunction.ReturnType
-               
+
             | Ast.IdentifierExpression(i, _) -> // e.g. myArray.size
                 symbolTable.GetIdentifierTypeSpec i
-                               
+
             | Ast.LiteralExpression(l, _) -> // e.g. 1
                 match l with
                 | Ast.BoolLiteral(b)    -> simpleType Ast.Bool
                 | Ast.IntLiteral(i)     -> simpleType Ast.Int
                 | Ast.DoubleLiteral(f)  -> simpleType Ast.Double
                 | Ast.StringLiteral(f)  -> simpleType Ast.String
-               
+
             | Ast.Empty -> simpleType Ast.NoneType
-               
+
         self.Add(expression, expressionType)
-        expressionType    
-       
+        expressionType
+
     and canConvertType fromType toType =
         match fromType, toType with
         | { Type = Ast.Int; }, { Type = Ast.Double; } -> true
@@ -269,14 +272,14 @@ type ExpressionTypeTable(program, functionTable : FunctionTable, symbolTable : S
         | _ -> false
 
     and checkCast fromVariableType toVariableType =
-        if not (canConvertType fromVariableType toVariableType) then 
+        if not (canConvertType fromVariableType toVariableType) then
             raise (cannotConvertType (fromVariableType.ToString()) (toVariableType.ToString()))
 
     and checkArgument identifier index fromArgumentType toParameterType =
-        if not (canConvertType fromArgumentType toParameterType) then 
+        if not (canConvertType fromArgumentType toParameterType) then
             raise (invalidArguments identifier (index + 1) (fromArgumentType.ToString()) (toParameterType.ToString()))
-        
-       
+
+
     do program |> List.iter scanDeclaration
 
 type SemanticAnalysisResult =
@@ -287,21 +290,21 @@ type SemanticAnalysisResult =
 
 let analyze program =
     try
-        let symbolTable   = new SymbolTable(program)
-        let functionTable = new FunctionTable(program)
-        
+        let symbolTable   = SymbolTable(program)
+        let functionTable = FunctionTable(program)
+
         if not (functionTable.ContainsKey "main") then
             raise (missingEntryPoint())
-        
+
         let main = functionTable.["main"]
-        if (main.ParameterTypes <> []) then 
+        if (main.ParameterTypes <> []) then
             raise (missingEntryPoint())
-        
+
         let expressionTypes = new ExpressionTypeTable(program, functionTable, symbolTable)
-        
+
         Result.Ok {
             SymbolTable     = symbolTable;
             ExpressionTypes = expressionTypes;
         }
-        
+
     with _ as ex  -> Result.Error ex

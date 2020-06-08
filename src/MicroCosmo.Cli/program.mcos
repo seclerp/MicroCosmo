@@ -1,14 +1,11 @@
 # Sample program
 
-let a : int
-
-func fact(val : int) : int { 
-    if (val <= 1) { 
+func fact(val : int) : int {
+    if (val <= 1) {
         return 1
     }
-    
     return (val * fact(val - 1))
-} 
+}
 
 func main3() {
     let a : int
@@ -21,6 +18,7 @@ func main3() {
 }
 
 func main2() {
+    let a : int
     a = 1
     while (a < 6) {
         println(itostr(fact(a)))
@@ -38,5 +36,5 @@ func main1() {
 }
 
 func main() {
-    main1()
+   main1()
 }
